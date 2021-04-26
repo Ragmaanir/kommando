@@ -1,0 +1,16 @@
+name: kommando
+version: 0.1.0
+crystal: ">= 1.0.0"
+license: MIT
+
+authors:
+  - Ragmaanir <ragmaanir@gmail.com>
+
+development_dependencies:
+  microtest:
+    github: ragmaanir/microtest
+    branch: master
+
+  ameba:
+    github: veelenga/ameba
+    version: ~> 0.14
