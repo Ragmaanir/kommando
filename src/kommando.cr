@@ -69,63 +69,93 @@ module Kommando
         self.name.split("::").last
       end
 
-      {% verbatim do %}
-        def self.run(args : Array(String))
-          {% begin %}
-            {%
-              opt_vars = @type.instance_vars.select { |var| var.annotation(Kommando::Option) }
-            %}
+      OPTION_PARSERS = {% verbatim do %}
+        {% begin %}
+          {%
+            opt_vars = @type.instance_vars.select { |var| var.annotation(Kommando::Option) }
+          %}
 
+          {
+            __empty: true, # cannot create an empty literal, so add this ignored key
+            {% for var in opt_vars %}
+              {%
+                ann = var.annotation(Kommando::Option)
+                type = ann.named_args[:type]
+                validate = ann.named_args[:validate]
+                default = ann.named_args[:default]
+              %}
+
+              {{var.name}}: ->(raw_val : String?) {
+                  validator = {{validate}} || ->(v : {{type}}?){ true }
+
+                  default = case {{default}}
+                    when Proc then {{default}}.as(Proc)
+                    else ->() { {{default}} }
+                  end
+
+                  value = if raw_val
+                    Kommando::ARG_PARSERS[{{type}}].call(raw_val).as({{type}})
+                  else
+                    default.call
+                  end
+
+                  if !value.nil?
+                    res = validator.call(value)
+
+                    if ![true, nil].includes?(res)
+                      raise Kommando::ValidationError.new("Validation for {{var.name}} failed: #{res}")
+                    end
+                  end
+
+                  value
+                },
+            {% end %}
+          }
+        {% end %}
+      {% end %}
+
+
+      {% verbatim do %}
+        def self.run_xxx(args : Array(String))
+          {% begin %}
             # parse arguments
             # TODO
 
             raw_options = Kommando::Command.parse_args(args)
 
-            {% if opt_vars.empty? %}
-              new.call
-            {% else %}
-              options = {
-                {% for var in opt_vars %}
-                  {%
-                    ann = var.annotation(Kommando::Option)
-                    type = ann.named_args[:type]
-                    validate = ann.named_args[:validate]
-                    default = ann.named_args[:default]
-                  %}
-
-                  {{var.name}}: begin
-                      validator = {{validate}} || ->(v : {{type}}?){ true }
-
-                      default = case {{default}}
-                        when Proc then {{default}}.as(Proc)
-                        else ->() { {{default}} }
-                      end
-
-                      raw_val = raw_options[{{var.name.stringify}}]?
-
-                      value = if raw_val
-                        Kommando::ARG_PARSERS[{{type}}].call(raw_val).as({{type}})
-                      else
-                        default.call
-                      end
-
-                      if !value.nil?
-                        res = validator.call(value)
-
-                        if ![true, nil].includes?(res)
-                          raise Kommando::ValidationError.new("Validation for {{var.name}} failed: #{res}")
-                        end
-                      end
-
-                      value
-                    end,
+            options = {
+              {% for name, parser in OPTION_PARSERS %}
+                {% if name == "__empty" %}
+                  __empty: true,
+                {% else %}
+                  {{name}}: {{parser}}.call(raw_options[{{name.stringify}}]?),
                 {% end %}
-              }
+              {% end %}
+            }
 
-              new(**options).call
-            {% end %}
+            new(**options).call
+          {% end %}
+        end
 
-            {% debug %}
+        def self.run(args : Array(String))
+          {% begin %}
+            # parse arguments
+            # TODO
+
+            raw_options = Kommando::Command.parse_args(args)
+
+            {%
+              opt_vars = @type.instance_vars.select { |var| var.annotation(Kommando::Option) }
+            %}
+
+            options = NamedTuple.new(
+              {% for var in opt_vars %}
+                {% sn = var.name.stringify %}
+                {{var.name}}: OPTION_PARSERS[{{sn}}].call(raw_options[{{sn}}]?),
+              {% end %}
+            )
+
+            new(**options).call
           {% end %}
         end
 
