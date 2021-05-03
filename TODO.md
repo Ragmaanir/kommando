@@ -1,6 +1,7 @@
 
 ### Requirements
 
+ - https://nullprogram.com/blog/2020/08/01/
  - subcommands
  - automatic convert parameters and validate them (int, inclusion in list, ...)
  - automatic documentation (man, --help, html reference)
@@ -10,4 +11,4 @@
  - automatic bash auto completion
  - can be invoked without CLI by calling functions => easy to test
  - use helper methods in each command
- - library for: progress bar, spinner, notifications
+ - library for: progress bar, spinner, notifications, colors, input/confirm, fileutils, file permissions, ...
