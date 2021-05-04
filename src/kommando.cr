@@ -18,4 +18,8 @@ module Kommando
       super("Validation for property #{prop} failed with #{result}")
     end
   end
+
+  def self.bug(msg : String)
+    raise "Kommando BUG: #{msg}"
+  end
 end

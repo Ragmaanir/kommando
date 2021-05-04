@@ -22,7 +22,7 @@ module Kommando
           {% end %}
         {% end %}
       )]
-      @{{name.id}} : {{type}} | Nil
+      @{{name.id}} : {{type}} {% if default.is_a?(NilLiteral) %}| Nil{% end %}
 
       def {{name.id}}
         @{{name.id}}
@@ -136,7 +136,7 @@ module Kommando
                 @{{name}} = options[:{{name}}]
               {% else %}
                 if options.has_key?(:{{name}})
-                  @{{name}} = options[:{{name}}]?
+                  @{{name}} = options[:{{name}}]?.not_nil!
                 else
                   @{{name}} = {{default}}.call
                 end
@@ -148,5 +148,4 @@ module Kommando
     end # included
 
   end # Command
-
 end
