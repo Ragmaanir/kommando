@@ -33,29 +33,6 @@ module Kommando
       # @{{name.id}} : {{type}}
     end
 
-    def self.parse_args(original_args : Array(String))
-      args = original_args.dup
-
-      raw_options = {} of String => String
-
-      while raw_arg = args.shift?
-        arg_name = case raw_arg
-                   when .starts_with?("--")  then raw_arg[2..-1]
-                   when .starts_with?(/-\w/) then raw_arg[1..-1]
-                   else
-                     raise %[Could not parse argument: #{raw_arg.inspect.colorize(:red)} in #{original_args.inspect.colorize(:blue)}]
-                   end
-
-        if !args.empty? && !args[0].starts_with?("-")
-          raw_options[arg_name] = args.shift
-        else
-          raw_options[arg_name] = ""
-        end
-      end
-
-      raw_options
-    end
-
     macro inherited
       def self.command_name
         canonical_name.underscore
@@ -107,7 +84,7 @@ module Kommando
             # parse arguments
             # TODO
 
-            raw_options = Kommando::Command.parse_args(args)
+            raw_options = Kommando::Parser.parse_args(args)
 
             options = {
               {% for name, parser in OPTION_PARSERS %}
@@ -128,7 +105,7 @@ module Kommando
             # parse arguments
             # TODO
 
-            raw_options = Kommando::Command.parse_args(args)
+            raw_options = Kommando::Parser.parse_args(args)
 
             options = NamedTuple.new(
               {% for var in @type.instance_vars %}
