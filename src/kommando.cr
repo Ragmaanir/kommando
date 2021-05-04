@@ -14,23 +14,39 @@ module Kommando
   }
 
   class ValidationError < Exception
-    def initialize(*args)
-      super
+    def initialize(prop : String, result)
+      super("Validation for property #{prop} failed with #{result}")
     end
   end
 
   abstract class Command
     macro option(name, type, **options)
-      option({{name}}, {{type}}, "No description", {{**options}})
+      option({{name}}, {{type}}, nil, {{**options}})
     end
 
     macro option(name, type, desc, **options)
+      {% default = options[:default] %}
       @[Kommando::Option(
         type: {{type}},
         desc: {{desc}},
-        {{**options}}
+        {% if !default.is_a?(NilLiteral) %}
+          default: case {{default}}
+            when Proc then {{default}}.as(Proc)
+            else ->() { {{default}} }
+          end,
+        {% end %}
+
+        {% for k, v in options %}
+          {% if k != "default" %}
+            {{k}}: {{v}},
+          {% end %}
+        {% end %}
       )]
       @{{name.id}} : {{type}} | Nil
+
+      def {{name.id}}
+        @{{name.id}}
+      end
     end
 
     macro argument(name, type, **options)
@@ -69,46 +85,36 @@ module Kommando
         self.name.split("::").last
       end
 
-      OPTION_PARSERS = {% verbatim do %}
-        {% begin %}
-          {%
-            opt_vars = @type.instance_vars.select { |var| var.annotation(Kommando::Option) }
-          %}
-
+      {% verbatim do %}
+      OPTION_PARSERS = {% begin %}
           {
             __empty: true, # cannot create an empty literal, so add this ignored key
-            {% for var in opt_vars %}
-              {%
-                ann = var.annotation(Kommando::Option)
-                type = ann.named_args[:type]
-                validate = ann.named_args[:validate]
-                default = ann.named_args[:default]
-              %}
+            {% for var in @type.instance_vars %}
+              {% if ann = var.annotation(Kommando::Option) %}
+                {% type = ann.named_args[:type] %}
 
-              {{var.name}}: ->(raw_val : String?) {
-                  validator = {{validate}} || ->(v : {{type}}?){ true }
-
-                  default = case {{default}}
-                    when Proc then {{default}}.as(Proc)
-                    else ->() { {{default}} }
-                  end
+                {{var.name}}: ->(raw_val : String?) {
+                  validator = {{ann.named_args[:validate]}} || ->(v : {{type}}?){ true }
 
                   value = if raw_val
                     Kommando::ARG_PARSERS[{{type}}].call(raw_val).as({{type}})
                   else
-                    default.call
+                    if default = {{ann.named_args[:default]}}
+                      default.call
+                    end
                   end
 
                   if !value.nil?
                     res = validator.call(value)
 
                     if ![true, nil].includes?(res)
-                      raise Kommando::ValidationError.new("Validation for {{var.name}} failed: #{res}")
+                      raise Kommando::ValidationError.new("{{var.name}}", res.to_s)
                     end
                   end
 
                   value
                 },
+              {% end %}
             {% end %}
           }
         {% end %}
@@ -126,7 +132,7 @@ module Kommando
             options = {
               {% for name, parser in OPTION_PARSERS %}
                 {% if name == "__empty" %}
-                  __empty: true,
+                  __empty: true, # cannot create an empty literal, so add this ignored key
                 {% else %}
                   {{name}}: {{parser}}.call(raw_options[{{name.stringify}}]?),
                 {% end %}
@@ -144,14 +150,12 @@ module Kommando
 
             raw_options = Kommando::Command.parse_args(args)
 
-            {%
-              opt_vars = @type.instance_vars.select { |var| var.annotation(Kommando::Option) }
-            %}
-
             options = NamedTuple.new(
-              {% for var in opt_vars %}
-                {% sn = var.name.stringify %}
-                {{var.name}}: OPTION_PARSERS[{{sn}}].call(raw_options[{{sn}}]?),
+              {% for var in @type.instance_vars %}
+                {% if var.annotation(Kommando::Option) %}
+                  {% sn = var.name.stringify %}
+                  {{var.name}}: OPTION_PARSERS[{{sn}}].call(raw_options[{{sn}}]?),
+                {% end %}
               {% end %}
             )
 
@@ -159,16 +163,27 @@ module Kommando
           {% end %}
         end
 
-        def initialize(**options)
-          {% begin %}
-            {%
-              opt_vars = @type.instance_vars.select { |var|
-                var.annotation(Kommando::Option)
-              }
-            %}
+        def self.execute(**options)
+          new(**options).call
+        end
 
-            {% for v in opt_vars %}
-              @{{v.name.id}} = options[:{{v.name.id}}]
+        def initialize(**options)
+          {% for v in @type.instance_vars %}
+            {% if ann = v.annotation(Kommando::Option) %}
+              {%
+                name = v.name.id
+                default = ann.named_args[:default]
+              %}
+
+              {% if default.is_a?(NilLiteral) %}
+                @{{name}} = options[:{{name}}]
+              {% else %}
+                if options.has_key?(:{{name}})
+                  @{{name}} = options[:{{name}}]?
+                else
+                  @{{name}} = {{default}}.call
+                end
+              {% end %}
             {% end %}
           {% end %}
         end
@@ -177,10 +192,13 @@ module Kommando
 
   end # Command
 
+  alias CommandProc = (Array(String)) ->
+  alias Commandlike = Command.class | CommandProc
+
   class Namespace
     getter name : String
     getter namespaces : Hash(String, Namespace) = Hash(String, Namespace).new
-    getter commands : Hash(String, Command.class) = Hash(String, Command.class).new
+    getter commands : Hash(String, Commandlike) = Hash(String, Commandlike).new
 
     def self.build(name, &block)
       n = new(name)
@@ -231,7 +249,10 @@ module Kommando
       arg = args.shift
 
       if cmd = commands[arg]?
-        cmd.run(args)
+        case cmd
+        in Command.class then cmd.run(args)
+        in CommandProc   then cmd.call(args)
+        end
       elsif ns = namespaces[arg]?
         ns.run(args)
       else

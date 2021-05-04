@@ -10,13 +10,25 @@ describe Kommando do
     argument(:name, String, format: /\A\w+/)
 
     def call
-      puts "Command called: #{self.inspect}"
+      self
     end
   end
 
-  test "executed validations" do
-    Create.run(["-age", "13", "-nickname", "toby"])
+  test "assigns values" do
+    cmd = Create.run(["-age", "13", "-nickname", "toby"])
 
+    assert cmd.age == 13
+    assert cmd.nickname == "toby"
+    assert cmd.force == false
+
+    cmd = Create.execute(age: 13, nickname: "toby")
+
+    assert cmd.age == 13
+    assert cmd.nickname == "toby"
+    assert cmd.force == false
+  end
+
+  test "executed validations" do
     assert_raises(Kommando::ValidationError) do
       Create.run(["-age", "12", "-nickname", "toby"])
     end
@@ -26,13 +38,11 @@ end
 describe Kommando::Namespace do
   class Create < Kommando::Command
     def call
-      puts "Command called: #{self.inspect}"
     end
   end
 
   class Migrate < Kommando::Command
     def call
-      puts "Command called: #{self.inspect}"
     end
   end
 
@@ -49,5 +59,33 @@ describe Kommando::Namespace do
     assert root.namespaces.keys == ["db"]
 
     root.run(["db", "create"])
+  end
+end
+
+describe Examples do
+  class Admin < Kommando::Command
+    def call
+    end
+  end
+
+  class Build < Kommando::Command
+    def call
+    end
+  end
+
+  test do
+    app = Kommando::Namespace.build("root") do
+      namespace("db") do
+        commands Admin # , Console, Create, Migrate, Populate, Start
+      end
+
+      namespace("docker") do
+        commands Build
+      end
+
+      namespace("webapp") do
+        # commands Start , Restart
+      end
+    end
   end
 end
