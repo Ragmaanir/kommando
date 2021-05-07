@@ -29,10 +29,6 @@ module Kommando
       end
     end
 
-    macro argument(name, type, **options)
-      # @{{name.id}} : {{type}}
-    end
-
     macro inherited
       def self.command_name
         canonical_name.underscore
@@ -54,7 +50,7 @@ module Kommando
                   validator = {{ann.named_args[:validate]}} || ->(v : {{type}}?){ true }
 
                   value = if raw_val
-                    Kommando::ARG_PARSERS[{{type}}].call(raw_val).as({{type}})
+                    Kommando::ARG_PARSERS[{{type.stringify}}].call(raw_val).as({{type}})
                   else
                     if default = {{ann.named_args[:default]}}
                       default.call
@@ -102,10 +98,9 @@ module Kommando
 
         def self.run(args : Array(String))
           {% begin %}
-            # parse arguments
-            # TODO
-
-            raw_options = Kommando::Parser.parse_args(args)
+            pair = Kommando::Parser.parse_args(args)
+            raw_options = pair[:options]
+            positional_args = pair[:positional]
 
             options = NamedTuple.new(
               {% for var in @type.instance_vars %}
@@ -116,12 +111,44 @@ module Kommando
               {% end %}
             )
 
-            new(**options).call
+            new(**options).run(positional_args)
           {% end %}
         end
 
-        def self.execute(**options)
-          new(**options).call
+        def self.execute(*args : String, **options)
+          new(**options).run(args.to_a)
+        end
+
+        def self.execute(args : Array(String) = [] of String, **options)
+          new(**options).run(args)
+        end
+
+        def run(args : Array(String))
+          {% begin %}
+            {%
+              call_meths = @type.methods.select(&.name.==("call"))
+              raise "Overloading call method is not allowed" if call_meths.size != 1
+              meth = call_meths.first
+            %}
+
+            {% if meth.args.size == 0 %}
+              call
+            {% else %}
+              args = {
+                {% for arg in meth.args %}
+                  {{arg.name}}: begin
+                    parser = Kommando::ARG_PARSERS[{{arg.restriction.stringify}}]
+                    arg = args.shift? || raise "{{@type.name}}.run: Argument missing: {{arg.name}} : {{arg.restriction}}"
+                    parser.call(arg)
+                  end,
+                {% end %}
+              }
+
+              call(**args)
+            {% end %}
+          {% end %}
+
+          self
         end
 
         def initialize(**options)

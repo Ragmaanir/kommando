@@ -7,21 +7,22 @@ describe Kommando do
 
     option(:force, Bool, "Description", default: false)
 
-    argument(:name, String, format: /\A\w+/)
-
-    def call
+    @[Kommando::Params(name: {format: //})]
+    def call(name : String, i : Int32)
+      p name
+      p i
       self
     end
   end
 
   test "assigns values" do
-    cmd = Create.run(["-age", "13", "-nickname", "toby"])
+    cmd = Create.run(["-age", "13", "-nickname", "toby", "thename", "55"])
 
     assert cmd.age == 13
     assert cmd.nickname == "toby"
     assert cmd.force == false
 
-    cmd = Create.execute(age: 13, nickname: "toby")
+    cmd = Create.execute("thename", "33", age: 13, nickname: "toby")
 
     assert cmd.age == 13
     assert cmd.nickname == "toby"
@@ -35,7 +36,7 @@ describe Kommando do
   end
 end
 
-describe Kommando::Namespace do
+describe Namespace do
   class Create < Kommando::Command
     def call
     end
@@ -47,7 +48,7 @@ describe Kommando::Namespace do
   end
 
   test do
-    root = Kommando::Namespace.build("root") do
+    root = Kommando::Namespace.root do
       commands Create
       namespace("db") do
         # commands Create, Migrate, Drop, Dump
@@ -74,7 +75,7 @@ describe Examples do
   end
 
   test do
-    app = Kommando::Namespace.build("root") do
+    app = Kommando::Namespace.root do
       namespace("db") do
         commands Admin # , Console, Create, Migrate, Populate, Start
       end

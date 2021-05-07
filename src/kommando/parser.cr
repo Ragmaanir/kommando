@@ -3,24 +3,27 @@ module Kommando
     def self.parse_args(original_args : Array(String))
       args = original_args.dup
 
-      raw_options = {} of String => String
+      options = {} of String => String
+      positional = [] of String
 
-      while raw_arg = args.shift?
-        arg_name = case raw_arg
-                   when .starts_with?("--")  then raw_arg[2..-1]
-                   when .starts_with?(/-\w/) then raw_arg[1..-1]
-                   else
-                     raise %[Could not parse argument: #{raw_arg.inspect.colorize(:red)} in #{original_args.inspect.colorize(:blue)}]
-                   end
+      while arg = args.shift?
+        name = case arg
+               when .starts_with?("--")  then arg[2..-1]
+               when .starts_with?(/-\w/) then arg[1..-1]
+               end
 
-        if !args.empty? && !args[0].starts_with?("-")
-          raw_options[arg_name] = args.shift
+        if name
+          if !args.empty? && !args[0].starts_with?("-")
+            options[name] = args.shift
+          else
+            options[name] = ""
+          end
         else
-          raw_options[arg_name] = ""
+          positional << arg
         end
       end
 
-      raw_options
+      {options: options, positional: positional}
     end
   end
 end

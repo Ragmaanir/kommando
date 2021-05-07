@@ -7,10 +7,13 @@ module Kommando
   annotation Option
   end
 
+  annotation Params
+  end
+
   ARG_PARSERS = {
-    Int32  => ->(s : String) { Int32.new(s) },
-    String => ->(s : String) { s },
-    Bool   => ->(s : String) { s != nil },
+    "Int32":  ->(s : String) { Int32.new(s) },
+    "String": ->(s : String) { s },
+    "Bool":   ->(s : String) { s != nil },
   }
 
   class ValidationError < Exception

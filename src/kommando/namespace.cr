@@ -7,7 +7,13 @@ module Kommando
     getter namespaces : Hash(String, Namespace) = Hash(String, Namespace).new
     getter commands : Hash(String, Commandlike) = Hash(String, Commandlike).new
 
-    def self.build(name, &block)
+    def self.root(&block)
+      n = new("root")
+      with n yield n
+      n
+    end
+
+    protected def self.build(name, &block)
       n = new(name)
       with n yield n
       n

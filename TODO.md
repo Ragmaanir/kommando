@@ -16,6 +16,7 @@
  - automatic bash auto completion
  - can be invoked without CLI by calling functions => easy to test
  - use helper methods in each command
+ - Library for building/releasing crystal shards, check that version does not exist yet, check that version is new, git helpers, ...
  - library for: progress bar, spinner, notifications, colors, input/confirm, fileutils, file permissions, ...
 
 Patterns
