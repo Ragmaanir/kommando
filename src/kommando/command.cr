@@ -1,5 +1,8 @@
 module Kommando
-  abstract class Command
+  abstract class BaseCommand
+  end
+
+  abstract class Command(C) < BaseCommand
     macro option(name, type, **options)
       option({{name}}, {{type}}, nil, {{**options}})
     end
@@ -96,7 +99,7 @@ module Kommando
           {% end %}
         end
 
-        def self.run(args : Array(String))
+        def self.run(context : C, args : Array(String))
           {% begin %}
             pair = Kommando::Parser.parse_args(args)
             raw_options = pair[:options]
@@ -111,16 +114,16 @@ module Kommando
               {% end %}
             )
 
-            new(**options).run(positional_args)
+            new(context, **options).run(positional_args)
           {% end %}
         end
 
-        def self.execute(*args : String, **options)
-          new(**options).run(args.to_a)
+        def self.execute(context : C, *args : String, **options)
+          new(context, **options).run(args.to_a)
         end
 
-        def self.execute(args : Array(String) = [] of String, **options)
-          new(**options).run(args)
+        def self.execute(context : C, args : Array(String) = [] of String, **options)
+          new(context, **options).run(args)
         end
 
         def run(args : Array(String))
@@ -151,7 +154,9 @@ module Kommando
           self
         end
 
-        def initialize(**options)
+        @context : C
+
+        def initialize(@context, **options)
           {% for v in @type.instance_vars %}
             {% if ann = v.annotation(Kommando::Option) %}
               {%

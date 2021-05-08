@@ -1,6 +1,7 @@
 
 ### Requirements
 
+ - Github CI
  - https://nullprogram.com/blog/2020/08/01/
  - http://docopt.org/
  - subcommands
