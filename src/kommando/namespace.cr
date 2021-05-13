@@ -1,21 +1,8 @@
 module Kommando
   class Namespace(C)
+    # https://github.com/crystal-lang/crystal/issues/2803
     # alias CommandProc = (Array(String)) ->
-
-    # # alias Commandlike = Command(C).class | CommandProc
-    # class Commandlike(C)
-    #   getter cmd : Command(C).class | CommandProc
-
-    #   def initialize(@cmd : Command(C).class | CommandProc)
-    #   end
-
-    #   def run(ctx : C, args : Array(String))
-    #     case cmd
-    #     in Command(C).class then cmd.run(ctx, args)
-    #     in CommandProc      then cmd.call(ctx, args)
-    #     end
-    #   end
-    # end
+    # alias Commandlike = Command(C).class | CommandProc
 
     class Commandlike(C)
       getter cmd : (C, Array(String)) ->
@@ -34,16 +21,13 @@ module Kommando
 
     @context : C
 
-    def self.root(ctx : C, &block)
-      # n = new("root", ctx)
-      # with n yield n
-      # n
+    def self.root(ctx : C, &)
       build("root", ctx) do |n|
         with n yield n
       end
     end
 
-    protected def self.build(name, ctx : C, &block)
+    protected def self.build(name, ctx : C, &)
       n = new(name, ctx)
       with n yield n
       n
@@ -52,30 +36,30 @@ module Kommando
     def initialize(@name, @context : C)
     end
 
-    # def initialize(@name, &block)
+    # def initialize(@name, &)
     #   with self yield
     # end
 
-    # macro namespace(name, &block)
+    # macro namespace(name, &)
     #   %n = Namespace.new({{name}})
     #   @namespaces[{{name}}] = %n
     #   with %n yield
     # end
 
     # XXX
-    def namespace(name : String, &block)
+    def namespace(name : String, &)
       @namespaces[name] = Namespace.build(name, @context) do |n|
         with n yield n
       end
     end
 
-    # def namespace(name : String, &block)
+    # def namespace(name : String, &)
     #   n = Namespace.new(name)
     #   @namespaces[name] = n
     #   with n yield
     # end
 
-    # def namespace(name : String, &block)
+    # def namespace(name : String, &)
     #   @namespaces[name] = Namespace.build(name) do
     #     with self yield
     #   end
@@ -96,10 +80,6 @@ module Kommando
       arg = args.shift
 
       if cmd = commands[arg]?
-        # case cmd
-        # in Command(C).class then cmd.run(args)
-        # in CommandProc      then cmd.call(args)
-        # end
         cmd.run(@context, args)
       elsif ns = namespaces[arg]?
         ns.run(args)

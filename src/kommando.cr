@@ -2,8 +2,6 @@ require "colorize"
 require "./kommando/*"
 
 module Kommando
-  VERSION = {{ `shards version #{__DIR__}`.strip.stringify }}
-
   annotation Option
   end
 
@@ -13,7 +11,7 @@ module Kommando
   ARG_PARSERS = {
     "Int32":  ->(s : String) { Int32.new(s) },
     "String": ->(s : String) { s },
-    "Bool":   ->(s : String) { s != nil },
+    "Bool":   ->(s : String) { !s.in?(%w{false no}) },
   }
 
   class ValidationError < Exception

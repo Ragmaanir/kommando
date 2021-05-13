@@ -130,7 +130,7 @@ module Kommando
           {% begin %}
             {%
               call_meths = @type.methods.select(&.name.==("call"))
-              raise "Overloading call method is not allowed" if call_meths.size != 1
+              raise "Kommando: Overloading Command#call is not allowed" if call_meths.size > 1
               meth = call_meths.first
             %}
 
@@ -178,6 +178,23 @@ module Kommando
         end
       {% end %}
     end # included
+  end   # Command
 
-  end # Command
+  # class Cmd < Command(Nil)
+  #   def self.run(args : Array(String))
+  #     run(nil, args)
+  #   end
+
+  #   def self.execute(*args : String, **options)
+  #     new(nil, **options).run(args.to_a)
+  #   end
+
+  #   def self.execute(args : Array(String) = [] of String, **options)
+  #     new(nil, **options).run(args)
+  #   end
+
+  #   def initialize(**options)
+  #     initialize(nil, **options)
+  #   end
+  # end
 end
