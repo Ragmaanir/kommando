@@ -1,6 +1,6 @@
 name: kommando
 version: 0.1.0
-crystal: ">= 1.0.0"
+crystal: ">= 0.3.6"
 license: MIT
 
 authors:
@@ -9,7 +9,7 @@ authors:
 development_dependencies:
   microtest:
     github: ragmaanir/microtest
-    branch: master
+    version: ~> 1.2
 
   ameba:
     github: veelenga/ameba
