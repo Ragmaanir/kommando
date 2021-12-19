@@ -1,0 +1,4 @@
+#!/usr/bin/env crystal
+require "./src/kommando/cli"
+
+Kommando::Cli.run

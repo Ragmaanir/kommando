@@ -1,6 +1,6 @@
 /docs/
 /lib/
-/bin/ameba
+/bin/
 /.shards/
 *.dwarf
 
