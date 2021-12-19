@@ -34,12 +34,10 @@ module Kommando
 
     macro inherited
       def self.command_name
-        canonical_name.underscore
+        name.split("::").last.underscore
       end
 
-      def self.canonical_name
-        self.name.split("::").last
-      end
+      delegate command_name, to: self.class
 
       {% verbatim do %}
       OPTION_PARSERS = {% begin %}
@@ -151,10 +149,12 @@ module Kommando
             {% end %}
           {% end %}
 
-          self
+          # self
+          # https://github.com/crystal-lang/crystal/issues/10911
+          nil
         end
 
-        @context : C
+        getter context : C
 
         def initialize(@context, **options)
           {% for v in @type.instance_vars %}

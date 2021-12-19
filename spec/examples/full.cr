@@ -1,18 +1,27 @@
-class Create < Kommando::Command(Nil)
+class Ctx
+end
+
+class Create < Kommando::Command(Ctx)
+  def call
+  end
+end
+
+class UnrelatedCmd < Kommando::Command(Nil)
   def call
   end
 end
 
 test do
-  ctx = nil
+  ctx = Ctx.new
 
   root = Kommando::Namespace.root(ctx) do
     namespace("db") do
-      commands Create
+      command Create
+      command UnrelatedCmd
     end
   end
 
-  assert root.commands.keys == ["create"]
+  assert root.namespaces["db"].commands.keys == ["create", "unrelated_cmd"]
   assert root.namespaces.keys == ["db"]
 
   root.run(["db", "create"])

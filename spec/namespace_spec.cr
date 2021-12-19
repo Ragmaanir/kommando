@@ -2,16 +2,18 @@ require "./spec_helper"
 
 describe Kommando::Namespace do
   class Ctx
-    property cmd : Kommando::Command(self)?
+    getter execution_log = [] of String
   end
 
   class Create < Kommando::Command(Ctx)
     def call
+      context.execution_log << self.command_name
     end
   end
 
   class Migrate < Kommando::Command(Ctx)
     def call
+      context.execution_log << self.command_name
     end
   end
 
@@ -20,9 +22,10 @@ describe Kommando::Namespace do
 
     root = Kommando::Namespace.root(ctx) do
       commands Create
+
       namespace("db") do
-        # commands Create, Migrate, Drop, Dump
-        commands Create, Migrate
+        command Create
+        command Migrate
       end
     end
 
@@ -30,5 +33,8 @@ describe Kommando::Namespace do
     assert root.namespaces.keys == ["db"]
 
     root.run(["db", "create"])
+    root.run(["db", "migrate"])
+
+    assert ctx.execution_log == ["create", "migrate"]
   end
 end

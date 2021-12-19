@@ -2,8 +2,9 @@
 
 ### Version 0.1.0
 
-## Installation
+Kommando is a library that helps you build small and large command line interfaces in crystal.
 
+## Installation
 
 Add this to your application's `shard.yml`:
 
@@ -29,16 +30,12 @@ Classes can define helper methods that are scoped to the command. And the helper
 
 **Why are positional arguments specified as method parameters and options using the `options`-macro?**
 
-Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature on in one big annotation. Specifying a description, validations etc for each options is easier that way too.
+Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature or in one big annotation. Specifying a description, validations etc for each options is easier that way too.
 
 
 ## Usage
 
-```crystal
-require "kommando"
-```
-
-## Commands
+### Commands
 
 ```crystal
 record(User, name : String, age : Int32, height : Int32?, nickname : String?)
@@ -66,6 +63,74 @@ test "create user with options" do
   ])
 
   assert USERS == [user]
+end
+
+```
+
+### Namespaces
+
+```crystal
+require "kommando"
+
+class Create < Kommando::Command(Nil)
+  def call
+  end
+end
+
+class Migrate < Kommando::Command(Nil)
+  def call
+  end
+end
+
+test do
+  ctx = nil
+
+  root = Kommando::Namespace.root(ctx) do
+    commands Create
+
+    namespace("db") do
+      commands Create, Migrate
+    end
+  end
+
+  assert root.commands.keys == ["create"]
+  assert root.namespaces.keys == ["db"]
+
+  root.run(["db", "create"])
+end
+
+```
+
+```crystal
+require "kommando"
+
+class Ctx
+end
+
+class Create < Kommando::Command(Ctx)
+  def call
+  end
+end
+
+class UnrelatedCmd < Kommando::Command(Nil)
+  def call
+  end
+end
+
+test do
+  ctx = Ctx.new
+
+  root = Kommando::Namespace.root(ctx) do
+    namespace("db") do
+      command Create
+      command UnrelatedCmd
+    end
+  end
+
+  assert root.namespaces["db"].commands.keys == ["create", "unrelated_cmd"]
+  assert root.namespaces.keys == ["db"]
+
+  root.run(["db", "create"])
 end
 
 ```

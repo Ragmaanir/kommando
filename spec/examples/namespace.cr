@@ -13,8 +13,8 @@ test do
 
   root = Kommando::Namespace.root(ctx) do
     commands Create
+
     namespace("db") do
-      # commands Create, Migrate, Drop, Dump
       commands Create, Migrate
     end
   end

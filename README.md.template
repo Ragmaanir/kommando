@@ -2,8 +2,9 @@
 
 ### Version <%= Kommando::VERSION %>
 
-## Installation
+Kommando is a library that helps you build small and large command line interfaces in crystal.
 
+## Installation
 
 Add this to your application's `shard.yml`:
 
@@ -29,21 +30,29 @@ Classes can define helper methods that are scoped to the command. And the helper
 
 **Why are positional arguments specified as method parameters and options using the `options`-macro?**
 
-Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature on in one big annotation. Specifying a description, validations etc for each options is easier that way too.
+Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature or in one big annotation. Specifying a description, validations etc for each options is easier that way too.
 
 
 ## Usage
+
+### Commands
+
+```crystal
+<%= File.read("./spec/examples/command.cr") %>
+```
+
+### Namespaces
+
+```crystal
+require "kommando"
+
+<%= File.read("./spec/examples/namespace.cr") %>
+```
 
 ```crystal
 require "kommando"
 
 <%= File.read("./spec/examples/full.cr") %>
-```
-
-## Commands
-
-```crystal
-<%= File.read("./spec/examples/command.cr") %>
 ```
 
 ## Contributing

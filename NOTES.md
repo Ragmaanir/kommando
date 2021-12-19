@@ -25,3 +25,6 @@ Use cases:
 - crystal run src/start.cr --error-trace
 - docker run -it myimage /bin/bash
 
+### Implementations
+
+- Instances: Namespaces are instances containing other namespaces and command-like objects

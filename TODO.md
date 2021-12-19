@@ -20,6 +20,9 @@
 - dry-run
 - undo
 - include rake-like features too? e.g. dependencies
+- interactive mode: instead of passing parameters, you get a prompt with options
+- interactive documentation
+- option to pass parameters as JSON
 
 - Library:
   - building/releasing crystal shards, check that version does not exist yet, check that version is new, git helpers, ...

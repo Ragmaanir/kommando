@@ -3,15 +3,17 @@ module Kommando
     # https://github.com/crystal-lang/crystal/issues/2803
     # alias CommandProc = (Array(String)) ->
     # alias Commandlike = Command(C).class | CommandProc
-
     class Commandlike(C)
-      getter cmd : (C, Array(String)) ->
+      getter cmd : ((C, Array(String)) ->) | ((Nil, Array(String)) ->)
 
       def initialize(@cmd)
       end
 
       def run(ctx : C, args : Array(String))
-        cmd.call(ctx, args)
+        case c = cmd
+        in Proc(C, Array(String), Nil)   then c.call(ctx, args)
+        in Proc(Nil, Array(String), Nil) then c.call(nil, args)
+        end
       end
     end
 
@@ -19,7 +21,7 @@ module Kommando
     getter namespaces : Hash(String, Namespace(C)) = Hash(String, Namespace(C)).new
     getter commands : Hash(String, Commandlike(C)) = Hash(String, Commandlike(C)).new
 
-    @context : C
+    getter context : C
 
     def self.root(ctx : C, &)
       build("root", ctx) do |n|
@@ -65,10 +67,23 @@ module Kommando
     #   end
     # end
 
-    def commands(*cmds : Command(C).class)
+    def commands(*cmds : Command(C).class | Command(Nil).class)
       cmds.each do |cmd|
+        command(cmd)
+      end
+    end
+
+    def command(cmd : Command(C).class | Command(Nil).class)
+      case cmd
+      in Command(C).class
         @commands[cmd.command_name] = Commandlike(C).new(
           ->(ctx : C, args : Array(String)) {
+            cmd.run(ctx, args)
+          }
+        )
+      in Command(Nil).class
+        @commands[cmd.command_name] = Commandlike(C).new(
+          ->(ctx : Nil, args : Array(String)) {
             cmd.run(ctx, args)
           }
         )
