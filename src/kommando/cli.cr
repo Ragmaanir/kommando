@@ -1,22 +1,17 @@
-require "ecr"
 require "./version"
+require "../kommando"
+require "./cli/readme"
 
 module Kommando
-  class Cli
+  module Cli
     ROOT = Path.new(__DIR__).parent.parent
 
-    class Readme
-      ECR.def_to_s "README.md.ecr"
-    end
-
     def self.run(argv = ARGV)
-      case argv[0]?
-      when "readme"
-        puts "Building README.md from README.md.ecr"
-        File.write(ROOT / "README.md", Readme.new.to_s)
-      else
-        puts "Usage: cli readme"
+      root = Kommando::Namespace.root(nil) do
+        command Readme
       end
+
+      root.run(argv)
     end
 
     # def docker(args : Array(String), **options)
