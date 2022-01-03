@@ -1,28 +1,27 @@
 require "./spec_helper"
 
 describe Kommando do
-  class Ctx
-    property cmd : Kommando::Command(self)?
-  end
+  COMMANDS = Array(Create).new
 
-  class Create < Kommando::Command(Ctx)
-    option(:age, Int32, validate: ->(v : Int32) { (13..150).includes?(v) })
-    option(:nickname, String, format: /\A[a-zA-Z]+\z/)
+  class Create
+    include Kommando::Command
+
+    option(:age, Int32, "", validate: ->(v : Int32) { (13..150).includes?(v) })
+    option(:nickname, String, "", format: /\A[a-zA-Z]+\z/)
 
     option(:force, Bool, "Description", default: false)
 
-    @[Kommando::Params(name: {format: //})]
-    def call(name : String, i : Int32)
-      @context.cmd = self
+    arg(:name, String)
+
+    def call
+      COMMANDS << self
     end
   end
 
   test "assigns values from cmd args" do
-    ctx = Ctx.new
+    Create.call(["thename", "55", "-age", "13", "-nickname", "toby"])
 
-    Create.run(ctx, ["-age", "13", "-nickname", "toby", "thename", "55"])
-
-    cmd = ctx.cmd.not_nil!
+    cmd = COMMANDS.last
 
     assert cmd.is_a?(Create)
 
@@ -32,11 +31,7 @@ describe Kommando do
   end
 
   test "assign values based on named args" do
-    ctx = Ctx.new
-
-    Create.execute(ctx, "thename", "33", age: 13, nickname: "toby")
-
-    cmd = ctx.cmd.not_nil!
+    cmd = Create.new("thename", "33", age: 13, nickname: "toby")
 
     assert cmd.is_a?(Create)
 
@@ -46,10 +41,8 @@ describe Kommando do
   end
 
   test "executed validations" do
-    ctx = Ctx.new
-
-    assert_raises(Kommando::ValidationError) do
-      Create.run(ctx, ["-age", "12", "-nickname", "toby"])
+    assert_raises(Kommando::MissingArgumentError) do
+      Create.call(["-age", "12", "-nickname", "toby"])
     end
   end
 end

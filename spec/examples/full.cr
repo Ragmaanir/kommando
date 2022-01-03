@@ -1,20 +1,19 @@
-class Ctx
-end
+class Create
+  include Kommando::Command
 
-class Create < Kommando::Command(Ctx)
   def call
   end
 end
 
-class UnrelatedCmd < Kommando::Command(Nil)
+class UnrelatedCmd
+  include Kommando::Command
+
   def call
   end
 end
 
 test do
-  ctx = Ctx.new
-
-  root = Kommando::Namespace.root(ctx) do
+  root = Kommando::Namespace.root do
     namespace("db") do
       command Create
       command UnrelatedCmd

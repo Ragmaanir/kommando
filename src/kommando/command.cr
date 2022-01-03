@@ -1,38 +1,66 @@
 module Kommando
-  abstract class BaseCommand
-  end
-
-  abstract class Command(C) < BaseCommand
-    macro option(name, type, **options)
-      option({{name}}, {{type}}, nil, {{**options}})
-    end
-
-    macro option(name, type, desc, **options)
-      {% default = options[:default] %}
+  module Command
+    macro option(*args, __file = __FILE__, __line = __LINE__, **options)
+      {%
+        raise "Expected 3 arguments, got #{args.size} in #{__file.id}:#{__line}" if args.size != 3
+        name = args[0]
+        type = args[1]
+        desc = args[2]
+      %}
       @[Kommando::Option(
         type: {{type}},
         desc: {{desc}},
-        {% if !default.is_a?(NilLiteral) %}
-          default: case {{default}}
-            when Proc then {{default}}.as(Proc)
-            else ->() { {{default}} }
-          end,
-        {% end %}
+        default: (case %d = {{options[:default]}}
+          when Proc then %d
+          else ->() { %d }
+        end),
+        validate: ->(%v : {{type}}) {
+          %res = ({{options[:validate]}} || ->(_v : {{type}}){ true }).call(%v)
+
+          if ![true, nil].includes?(%res)
+            raise Kommando::ValidationError.new("{{name.id}}", %res.to_s)
+          end
+        },
+        parse: ({{options[:parse]}} || ->(%raw_val : String) {
+          Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+        }),
 
         {% for k, v in options %}
-          {% if k != "default" %}
+          {% if !["default".id, "parse".id, "validate".id].includes?(k) %}
             {{k}}: {{v}},
           {% end %}
         {% end %}
       )]
-      @{{name.id}} : {{type}} {% if default.is_a?(NilLiteral) %}| Nil{% end %}
+      @{{name.id}} : {{type}} | Nil
 
-      def {{name.id}}
-        @{{name.id}}
-      end
+      getter {{name.id}}
     end
 
-    macro inherited
+    macro arg(*args, __file = __FILE__, __line = __LINE__, **options)
+      {%
+        raise "Expected 2 arguments, got #{args.size} in #{__file.id}:#{__line}" if args.size != 2
+        name = args[0]
+        type = args[1]
+      %}
+      @[Kommando::Argument(
+        type: {{type}},
+        validate: {{options[:validate]}} || ->(%_v : {{type}}){ true },
+        parse: {{options[:parse]}} || ->(%raw_val : String) {
+          Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+        },
+
+        {% for k, v in options %}
+          {% if !["parse".id, "validate".id].includes?(k) %}
+            {{k}}: {{v}},
+          {% end %}
+        {% end %}
+      )]
+      @{{name.id}} : {{type}}
+
+      getter {{name.id}}
+    end
+
+    macro included
       def self.command_name
         name.split("::").last.underscore
       end
@@ -40,161 +68,82 @@ module Kommando
       delegate command_name, to: self.class
 
       {% verbatim do %}
-      OPTION_PARSERS = {% begin %}
-          {
-            __empty: true, # cannot create an empty literal, so add this ignored key
+      macro finished
+        {% verbatim do %}
+
+        def self.call(args : Array(String))
+          {% begin %}
+          %pair = Kommando::Parser.parse_args(args)
+
+          %positional_args = %pair[:positional]
+
+          {% i = 0 %}
+          %parsed_pos_args = Tuple.new(
             {% for var in @type.instance_vars %}
+              {% if ann = var.annotation(Kommando::Argument) %}
+                begin
+                  raise Kommando::MissingArgumentError.new("{{var.name}}") if {{i}} >= %positional_args.size
+                  {{ann[:parse]}}.call(%positional_args[{{i}}])
+                  {% i += 1 %}
+                end,
+              {% end %}
+            {% end %}
+          )
+
+          %options = %pair[:options]
+
+          %parsed_options = NamedTuple.new(
+            {% for var in @type.instance_vars %}
+              {% name = var.name %}
               {% if ann = var.annotation(Kommando::Option) %}
-                {% type = ann.named_args[:type] %}
+                {% a = ann.named_args %}
+                {{name}}: begin
+                  %raw_value = %options[{{name.stringify}}]?
 
-                {{var.name}}: ->(raw_val : String?) {
-                  validator = {{ann.named_args[:validate]}} || ->(v : {{type}}?){ true }
-
-                  value = if raw_val
-                    Kommando::ARG_PARSERS[{{type.stringify}}].call(raw_val).as({{type}})
-                  else
-                    if default = {{ann.named_args[:default]}}
-                      default.call
-                    end
-                  end
-
-                  if !value.nil?
-                    res = validator.call(value)
-
-                    if ![true, nil].includes?(res)
-                      raise Kommando::ValidationError.new("{{var.name}}", res.to_s)
-                    end
-                  end
-
-                  value
-                },
+                  {{a[:parse]}}.call(%raw_value) if %raw_value
+                end,
               {% end %}
             {% end %}
-          }
-        {% end %}
-      {% end %}
+          )
 
-
-      {% verbatim do %}
-        def self.run_xxx(args : Array(String))
-          {% begin %}
-            # parse arguments
-            # TODO
-
-            raw_options = Kommando::Parser.parse_args(args)
-
-            options = {
-              {% for name, parser in OPTION_PARSERS %}
-                {% if name == "__empty" %}
-                  __empty: true, # cannot create an empty literal, so add this ignored key
-                {% else %}
-                  {{name}}: {{parser}}.call(raw_options[{{name.stringify}}]?),
-                {% end %}
-              {% end %}
-            }
-
-            new(**options).call
+          new(*%parsed_pos_args, **%parsed_options).call
           {% end %}
-        end
+        end # self.call
 
-        def self.run(context : C, args : Array(String))
+        def initialize(*args, **options)
+          # positional arguments
           {% begin %}
-            pair = Kommando::Parser.parse_args(args)
-            raw_options = pair[:options]
-            positional_args = pair[:positional]
-
-            options = NamedTuple.new(
-              {% for var in @type.instance_vars %}
-                {% if var.annotation(Kommando::Option) %}
-                  {% sn = var.name.stringify %}
-                  {{var.name}}: OPTION_PARSERS[{{sn}}].call(raw_options[{{sn}}]?),
-                {% end %}
+            {% i = 0 %}
+            {% for v in @type.instance_vars %}
+              {% name = v.name.id %}
+              {% if ann = v.annotation(Kommando::Argument) %}
+                @{{name}} = args[{{i}}]
+                {% i += 1 %}
               {% end %}
-            )
-
-            new(context, **options).run(positional_args)
-          {% end %}
-        end
-
-        def self.execute(context : C, *args : String, **options)
-          new(context, **options).run(args.to_a)
-        end
-
-        def self.execute(context : C, args : Array(String) = [] of String, **options)
-          new(context, **options).run(args)
-        end
-
-        def run(args : Array(String))
-          {% begin %}
-            {%
-              call_meths = @type.methods.select(&.name.==("call"))
-              raise "Kommando: Overloading Command#call is not allowed" if call_meths.size > 1
-              meth = call_meths.first
-            %}
-
-            {% if meth.args.size == 0 %}
-              call
-            {% else %}
-              args = {
-                {% for arg in meth.args %}
-                  {{arg.name}}: begin
-                    parser = Kommando::ARG_PARSERS[{{arg.restriction.stringify}}]
-                    arg = args.shift? || raise "{{@type.name}}.run: Argument missing: {{arg.name}} : {{arg.restriction}}"
-                    parser.call(arg)
-                  end,
-                {% end %}
-              }
-
-              call(**args)
             {% end %}
           {% end %}
 
-          # self
-          # https://github.com/crystal-lang/crystal/issues/10911
-          nil
-        end
-
-        getter context : C
-
-        def initialize(@context, **options)
+          # options
           {% for v in @type.instance_vars %}
+            {% name = v.name.id %}
             {% if ann = v.annotation(Kommando::Option) %}
-              {%
-                name = v.name.id
-                default = ann.named_args[:default]
-              %}
+              {% default = ann.named_args[:default] %}
 
-              {% if default.is_a?(NilLiteral) %}
-                @{{name}} = options[:{{name}}]
-              {% else %}
-                if options.has_key?(:{{name}})
-                  @{{name}} = options[:{{name}}]?.not_nil!
-                else
-                  @{{name}} = {{default}}.call
-                end
-              {% end %}
+              %value = options[:{{name}}]? || {{default}}.call
+
+              case %v = %value
+              when nil
+              else
+                {{ann.named_args[:validate]}}.call(%v)
+
+                @{{name}} = %v
+              end
             {% end %}
           {% end %}
-        end
+        end # initialize
+        {% end %}
+      end # finished
       {% end %}
-    end # included
-  end   # Command
-
-  # class Cmd < Command(Nil)
-  #   def self.run(args : Array(String))
-  #     run(nil, args)
-  #   end
-
-  #   def self.execute(*args : String, **options)
-  #     new(nil, **options).run(args.to_a)
-  #   end
-
-  #   def self.execute(args : Array(String) = [] of String, **options)
-  #     new(nil, **options).run(args)
-  #   end
-
-  #   def initialize(**options)
-  #     initialize(nil, **options)
-  #   end
-  # end
+    end # inherited
+  end
 end

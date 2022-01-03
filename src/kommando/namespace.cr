@@ -1,41 +1,36 @@
 module Kommando
-  class Namespace(C)
+  class Namespace
     # https://github.com/crystal-lang/crystal/issues/2803
     # alias CommandProc = (Array(String)) ->
     # alias Commandlike = Command(C).class | CommandProc
-    class Commandlike(C)
-      getter cmd : ((C, Array(String)) ->) | ((Nil, Array(String)) ->)
+    class Commandlike
+      getter cmd : Array(String) ->
 
       def initialize(@cmd)
       end
 
-      def run(ctx : C, args : Array(String))
-        case c = cmd
-        in Proc(C, Array(String), Nil)   then c.call(ctx, args)
-        in Proc(Nil, Array(String), Nil) then c.call(nil, args)
-        end
+      def run(args : Array(String))
+        cmd.call(args)
       end
     end
 
     getter name : String
-    getter namespaces : Hash(String, Namespace(C)) = Hash(String, Namespace(C)).new
-    getter commands : Hash(String, Commandlike(C)) = Hash(String, Commandlike(C)).new
+    getter namespaces : Hash(String, Namespace) = Hash(String, Namespace).new
+    getter commands : Hash(String, Commandlike) = Hash(String, Commandlike).new
 
-    getter context : C
-
-    def self.root(ctx : C, &)
-      build("root", ctx) do |n|
+    def self.root(&)
+      build("root") do |n|
         with n yield n
       end
     end
 
-    protected def self.build(name, ctx : C, &)
-      n = new(name, ctx)
+    protected def self.build(name, &)
+      n = new(name)
       with n yield n
       n
     end
 
-    def initialize(@name, @context : C)
+    def initialize(@name)
     end
 
     # def initialize(@name, &)
@@ -50,7 +45,7 @@ module Kommando
 
     # XXX
     def namespace(name : String, &)
-      @namespaces[name] = Namespace.build(name, @context) do |n|
+      @namespaces[name] = Namespace.build(name) do |n|
         with n yield n
       end
     end
@@ -67,27 +62,18 @@ module Kommando
     #   end
     # end
 
-    def commands(*cmds : Command(C).class | Command(Nil).class)
+    def commands(*cmds : Command.class)
       cmds.each do |cmd|
         command(cmd)
       end
     end
 
-    def command(cmd : Command(C).class | Command(Nil).class)
-      case cmd
-      in Command(C).class
-        @commands[cmd.command_name] = Commandlike(C).new(
-          ->(ctx : C, args : Array(String)) {
-            cmd.run(ctx, args)
-          }
-        )
-      in Command(Nil).class
-        @commands[cmd.command_name] = Commandlike(C).new(
-          ->(ctx : Nil, args : Array(String)) {
-            cmd.run(ctx, args)
-          }
-        )
-      end
+    def command(cmd : Command.class)
+      @commands[cmd.command_name] = Commandlike.new(
+        ->(args : Array(String)) {
+          cmd.call(args)
+        }
+      )
     end
 
     def run(args : Array(String))
@@ -95,7 +81,7 @@ module Kommando
       arg = args.shift
 
       if cmd = commands[arg]?
-        cmd.run(@context, args)
+        cmd.run(args)
       elsif ns = namespaces[arg]?
         ns.run(args)
       else

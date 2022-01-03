@@ -3,7 +3,9 @@ require "../command"
 
 module Kommando
   module Cli
-    class Readme < Kommando::Command(Nil)
+    class Readme
+      include Kommando::Command
+
       class ReadmeTemplate
         ECR.def_to_s "README.md.ecr"
       end

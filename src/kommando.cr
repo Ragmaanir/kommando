@@ -5,7 +5,7 @@ module Kommando
   annotation Option
   end
 
-  annotation Params
+  annotation Argument
   end
 
   ARG_PARSERS = {
@@ -14,7 +14,16 @@ module Kommando
     "Bool":   ->(s : String) { !s.in?(%w{false no}) },
   }
 
-  class ValidationError < Exception
+  abstract class KommandoException < Exception
+  end
+
+  class MissingArgumentError < KommandoException
+    def initialize(arg : String)
+      super("Missing argument: '#{arg}'")
+    end
+  end
+
+  class ValidationError < KommandoException
     def initialize(prop : String, result)
       super("Validation for property #{prop} failed with #{result}")
     end

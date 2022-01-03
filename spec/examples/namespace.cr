@@ -1,17 +1,19 @@
-class Create < Kommando::Command(Nil)
+class Create
+  include Kommando::Command
+
   def call
   end
 end
 
-class Migrate < Kommando::Command(Nil)
+class Migrate
+  include Kommando::Command
+
   def call
   end
 end
 
 test do
-  ctx = nil
-
-  root = Kommando::Namespace.root(ctx) do
+  root = Kommando::Namespace.root do
     commands Create
 
     namespace("db") do
