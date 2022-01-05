@@ -1,29 +1,42 @@
 module Kommando
   module Parser
-    def self.parse_args(original_args : Array(String))
+    OPTION_PATTERN = /-[a-zA-Z]/
+    QUOTES         = /"'/
+
+    # Parses:
+    #
+    # "first -a=1"
+    # => {positional: ["first"], options: {"a" => 1}}
+    #
+    # "first -1 -b third"
+    # => {positional: ["first", "-1", "third"], options: {"b" => nil}}
+    #
+    def self.call(original_args : Array(String)) : {positional: Array(String), options: Hash(String, String?)}
       args = original_args.dup
 
-      options = {} of String => String
+      options = {} of String => String?
       positional = [] of String
 
       while arg = args.shift?
-        name = case arg
-               when .starts_with?("--")  then arg[2..-1]
-               when .starts_with?(/-\w/) then arg[1..-1]
-               end
+        if arg.starts_with?(OPTION_PATTERN)
+          parts = arg.split("=", 2)
 
-        if name
-          if !args.empty? && !args[0].starts_with?("-")
-            options[name] = args.shift
-          else
-            options[name] = ""
+          name = parts[0][1..-1]
+          value_part = parts[1]?
+
+          # remove quotes
+          # TODO escaped quotes
+          if (v = value_part) && v.starts_with?(QUOTES)
+            value_part = v[1..-2]
           end
+
+          options[name] = value_part
         else
           positional << arg
         end
       end
 
-      {options: options, positional: positional}
+      {positional: positional, options: options}
     end
   end
 end

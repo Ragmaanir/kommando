@@ -2,9 +2,9 @@ module Kommando
   module Command
     abstract def call
 
-    macro option(*args, __file = __FILE__, __line = __LINE__, **options)
+    macro option(*args, parse = nil, validate = nil, default = nil, __file = __FILE__, __line = __LINE__, **options)
       {%
-        raise "Expected 3 arguments, got #{args.size} in #{__file.id}:#{__line}" if args.size != 3
+        raise "Expected 3 arguments for option(...), got #{args.size} in #{__file.id}:#{__line}" if args.size != 3
         name = args[0]
         type = args[1]
         desc = args[2]
@@ -13,25 +13,23 @@ module Kommando
         type: {{type}},
         desc: {{desc}},
         short: {{options[:short] || name[0..0]}},
-        default: (case %d = {{options[:default]}}
+        default: (case %d = {{default}}
           when Proc then %d
           else ->() { %d }
         end),
         validate: ->(%v : {{type}}) {
-          %res = ({{options[:validate]}} || ->(_v : {{type}}){ true }).call(%v)
+          %res = ({{validate}} || ->(_v : {{type}}){ true }).call(%v)
 
           if ![true, nil].includes?(%res)
             raise Kommando::ValidationError.new("{{name.id}}", %res.to_s)
           end
         },
-        parse: ({{options[:parse]}} || ->(%raw_val : String) {
+        parse: ({{parse}} || ->(%raw_val : String) {
           Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
         }),
 
         {% for k, v in options %}
-          {% if !["default".id, "parse".id, "validate".id].includes?(k) %}
-            {{k}}: {{v}},
-          {% end %}
+          {{k}}: {{v}},
         {% end %}
       )]
       @{{name.id}} : {{type}} | Nil
@@ -39,23 +37,27 @@ module Kommando
       getter {{name.id}}
     end
 
-    macro arg(*args, __file = __FILE__, __line = __LINE__, **options)
+    macro arg(*args, parse = nil, validate = nil, __file = __FILE__, __line = __LINE__, **options)
       {%
-        raise "Expected 2 arguments, got #{args.size} in #{__file.id}:#{__line}" if args.size != 2
+        raise "Expected 2 arguments for arg(...), got #{args.size} in #{__file.id}:#{__line}" if args.size != 2
         name = args[0]
         type = args[1]
       %}
       @[Kommando::Argument(
         type: {{type}},
-        validate: {{options[:validate]}} || ->(%_v : {{type}}){ true },
-        parse: {{options[:parse]}} || ->(%raw_val : String) {
+        validate: ->(%v : {{type}}) {
+          %res = ({{validate}} || ->(_v : {{type}}){ true }).call(%v)
+
+          if ![true, nil].includes?(%res)
+            raise Kommando::ValidationError.new("{{name.id}}", %res.to_s)
+          end
+        },
+        parse: {{parse}} || ->(%raw_val : String) {
           Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
         },
 
         {% for k, v in options %}
-          {% if !["parse".id, "validate".id].includes?(k) %}
-            {{k}}: {{v}},
-          {% end %}
+          {{k}}: {{v}},
         {% end %}
       )]
       @{{name.id}} : {{type}}
@@ -76,7 +78,7 @@ module Kommando
 
         def self.call(args : Array(String))
           {% begin %}
-          %pair = Kommando::Parser.parse_args(args)
+          %pair = Kommando::Parser.call(args)
 
           %positional_args = %pair[:positional]
 
@@ -84,9 +86,14 @@ module Kommando
           %parsed_pos_args = Tuple.new(
             {% for var in @type.instance_vars %}
               {% if ann = var.annotation(Kommando::Argument) %}
+                {% a = ann.named_args %}
                 begin
                   raise Kommando::MissingArgumentError.new("{{var.name}}") if {{i}} >= %positional_args.size
-                  {{ann.named_args[:parse]}}.call(%positional_args[{{i}}])
+                  %value = {{a[:parse]}}.call(%positional_args[{{i}}])
+
+                  {{a[:validate]}}.call(%value)
+
+                  %value
                   {% i += 1 %}
                 end,
               {% end %}

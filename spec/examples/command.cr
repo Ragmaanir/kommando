@@ -21,8 +21,8 @@ test "create user with options" do
   user = User.new("Christian", 55, 175, "Chris")
 
   Create.call([
-    "-height", user.height.to_s,
-    "-nickname", user.nickname.to_s,
+    "-height=#{user.height}",
+    "-nickname=#{user.nickname}",
     user.name, user.age.to_s,
   ])
 
