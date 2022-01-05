@@ -42,7 +42,13 @@ describe Kommando do
     assert cmd.force == false
   end
 
-  test "executed validations" do
+  test "validates option" do
+    assert_raises(Kommando::ValidationError) do
+      Create.call(["thename", "-age", "12", "-nickname", "toby"])
+    end
+  end
+
+  test "raises on missing argument" do
     assert_raises(Kommando::MissingArgumentError) do
       Create.call(["-age", "12", "-nickname", "toby"])
     end
