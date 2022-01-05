@@ -1,5 +1,7 @@
 module Kommando
   module Command
+    abstract def call
+
     macro option(*args, __file = __FILE__, __line = __LINE__, **options)
       {%
         raise "Expected 3 arguments, got #{args.size} in #{__file.id}:#{__line}" if args.size != 3
@@ -10,6 +12,7 @@ module Kommando
       @[Kommando::Option(
         type: {{type}},
         desc: {{desc}},
+        short: {{options[:short] || name[0..0]}},
         default: (case %d = {{options[:default]}}
           when Proc then %d
           else ->() { %d }
@@ -83,12 +86,17 @@ module Kommando
               {% if ann = var.annotation(Kommando::Argument) %}
                 begin
                   raise Kommando::MissingArgumentError.new("{{var.name}}") if {{i}} >= %positional_args.size
-                  {{ann[:parse]}}.call(%positional_args[{{i}}])
+                  {{ann.named_args[:parse]}}.call(%positional_args[{{i}}])
                   {% i += 1 %}
                 end,
               {% end %}
             {% end %}
           )
+
+          if %parsed_pos_args.size != %positional_args.size
+            unexpected = %positional_args[%parsed_pos_args.size..-1]
+            raise Kommando::UnexpectedArgumentsError.new(unexpected)
+          end
 
           %options = %pair[:options]
 

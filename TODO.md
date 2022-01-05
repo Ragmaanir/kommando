@@ -5,14 +5,11 @@
 - Github CI
 - exit code: 0 = success, else error code
 - STDOUT/STDERR distinction
-- namespaces/subcommands
-- short and long versions
-- check options short and long names for uniqueness
+- check options/argument names for uniqueness
 - simple commands: just a closure with all args + remaining args as param
-- automatically convert parameters and validate them (int, inclusion in list, ...)
+
 - command validation (validate all parameters together)
 - reusable/embeddable components. e.g. include the same set of commands in multiple places but with different settings.
-- can be invoked without CLI by calling functions => easy to test
 - error handler, global/per-namespace/per-command
 - automatic documentation (man, --help, interactive help, search, html reference)
 - automatic bash auto completion
@@ -33,3 +30,11 @@
 - pre-commit hook to scan project for "XXX" comments
 
 ### DONE
+
+- raise on unexpected extra arguments
+- raise on short option duplicates
+- short and long versions
+- arguments and options
+- namespaces/subcommands
+- can be invoked without CLI by calling functions => easy to test
+- automatically convert parameters and validate them (int, inclusion in list, ...)

@@ -19,22 +19,24 @@ describe Kommando do
   end
 
   test "assigns values from cmd args" do
-    Create.call(["thename", "55", "-age", "13", "-nickname", "toby"])
+    Create.call(["thename", "-age", "13", "-nickname", "toby"])
 
     cmd = COMMANDS.last
 
     assert cmd.is_a?(Create)
 
+    assert cmd.name == "thename"
     assert cmd.age == 13
     assert cmd.nickname == "toby"
     assert cmd.force == false
   end
 
   test "assign values based on named args" do
-    cmd = Create.new("thename", "33", age: 13, nickname: "toby")
+    cmd = Create.new("thename", age: 13, nickname: "toby")
 
     assert cmd.is_a?(Create)
 
+    assert cmd.name == "thename"
     assert cmd.age == 13
     assert cmd.nickname == "toby"
     assert cmd.force == false
@@ -43,6 +45,12 @@ describe Kommando do
   test "executed validations" do
     assert_raises(Kommando::MissingArgumentError) do
       Create.call(["-age", "12", "-nickname", "toby"])
+    end
+  end
+
+  test "raises on unexpected arguments" do
+    assert_raises(Kommando::UnexpectedArgumentsError) do
+      Create.call(["a", "b"])
     end
   end
 end

@@ -23,6 +23,12 @@ module Kommando
     end
   end
 
+  class UnexpectedArgumentsError < KommandoException
+    def initialize(args : Array(String))
+      super("Unexpected arguments: #{args.join(", ")}")
+    end
+  end
+
   class ValidationError < KommandoException
     def initialize(prop : String, result)
       super("Validation for property #{prop} failed with #{result}")
