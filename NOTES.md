@@ -7,6 +7,15 @@
  - thor, rake
  - https://github.com/dazuma/toys
 
+### Features
+
+- [ ] Validation and parsing
+  - Should validation happen before or after parsing? Probably after. Validation before is done by the parser itself.
+  - What about contextual validation? E.g. option_a > option_b
+- [ ] Git allows options for parent and subcommands simultaneously:
+  `program -a -b -c subcommand -x -y -z`
+  This would require some kind of namespace-options which would be accessible for all commands in that namespace.
+
 ### Validation
 
 Provided validations:
@@ -17,8 +26,8 @@ Provided validations:
 
 Patterns
 
-Bool: -b; -b=true; --bool; --bool=true
-String: -s=word; -s='multiple words'; --string=word
+Bool: -b; -b=true; -bool; -bool=true
+String: -s=word; -s='multiple words'; -string=word
 
 Use cases:
 

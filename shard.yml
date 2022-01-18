@@ -1,6 +1,6 @@
 name: kommando
-version: 0.1.0
-crystal: ">= 0.3.6"
+version: 0.1.1
+crystal: ">= 1.0.0"
 license: MIT
 
 authors:
