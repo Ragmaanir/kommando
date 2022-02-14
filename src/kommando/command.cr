@@ -1,5 +1,14 @@
 module Kommando
   module Command
+    module Meta
+      def description : String?
+        nil
+      end
+
+      def call(args : Array(String))
+      end
+    end
+
     abstract def call
 
     macro option(*args, parse = nil, validate = nil, default = nil, __file = __FILE__, __line = __LINE__, **options)
@@ -66,6 +75,8 @@ module Kommando
     end
 
     macro included
+      extend Kommando::Command::Meta
+
       def self.command_name
         name.split("::").last.underscore
       end
