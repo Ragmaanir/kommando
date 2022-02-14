@@ -22,8 +22,8 @@ module Kommando
     def initialize(@name)
     end
 
-    def namespace(name : String, &)
-      @namespaces[name] = Namespace.build(name) do |n|
+    def namespace(name : String | Symbol, &)
+      @namespaces[name.to_s] = Namespace.build(name.to_s) do |n|
         with n yield n
       end
     end
@@ -34,8 +34,8 @@ module Kommando
       end
     end
 
-    def command(cmd : Command.class)
-      @commands[cmd.command_name] = ->(args : Array(String)) {
+    def command(cmd : Command.class, name : String = cmd.command_name)
+      @commands[name] = ->(args : Array(String)) {
         cmd.call(args)
       }
     end

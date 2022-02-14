@@ -14,10 +14,6 @@ module Kommando
       root.run(argv)
     end
 
-    # def docker(args : Array(String), **options)
-    #   cmd("sudo", ["docker", *args], **options)
-    # end
-
     def cmd(name : String, args : Array(String), **options)
       Process.run(
         name,

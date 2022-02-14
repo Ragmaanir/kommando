@@ -3,34 +3,40 @@ name: Crystal CI
 on:
   push:
   pull_request:
+    branches: [master]
   schedule:
-    - cron: "30 14 1 * *" # every first of the month at 14:30
+    - cron: "45 14 2 * *" # every 2nd of the month at 14:45
 
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        crystal: [latest, nightly]
+        # os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+          - os: ubuntu-latest
+            crystal: nightly
+          - os: macos-latest
+          - os: windows-latest
+        # crystal: [latest, nightly]
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Install Crystal
-        uses: oprypin/install-crystal@v1
-        with:
-          crystal: ${{ matrix.crystal }}
-
       - name: Download source
         uses: actions/checkout@v2
 
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: ${{ matrix.crystal }}
+
       - name: Install shards
-        run: shards install
-        env:
-          SHARDS_OPTS: --ignore-crystal-version
+        run: shards update
+
+      - name: Run tests
+        run: crystal spec
 
       - name: Check formatting
         run: crystal tool format --check
-
-      - name: Run specs
-        run: crystal spec
+        if: matrix.crystal != 'nightly' && matrix.os == 'ubuntu-latest'
