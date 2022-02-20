@@ -71,15 +71,9 @@ module Kommando
 
           @commands.each do |name, cmd|
             io << indent
-            io << name.colorize(:light_blue)
-            desc_offset = (16 - name.size).clamp(0, nil)
-            io << (" " * desc_offset)
+            io << ("%-16s" % name).colorize(:light_blue)
 
-            if desc = cmd.description
-              io << cmd.description.colorize(:light_gray)
-            else
-              io << "No description".colorize(:dark_gray)
-            end
+            io << cmd.description.colorize(:dark_gray)
 
             io.puts
           end
@@ -91,18 +85,20 @@ module Kommando
           io.puts "Namespaces:"
           io.puts
 
-          @namespaces.each do |name, ns|
+          @namespaces.each do |name, _ns|
             io << indent
             io << name.colorize(:light_blue)
-            # io << "\t"
-            # io << cmd.description.colorize(:light_gray)
             io.puts
           end
 
           io.puts
         end
       else
-        # TODO help for specific command
+        if cmd = @commands[args.first]?
+          cmd.describe(io)
+        else
+          raise "No command #{args.first.inspect} found in namespace #{name}"
+        end
       end
     end
   end

@@ -1,8 +1,8 @@
 module Kommando
   module Command
     module Meta
-      def description : String?
-        nil
+      def description : String
+        ""
       end
 
       def call(args : Array(String))
@@ -19,6 +19,7 @@ module Kommando
         desc = args[2]
       %}
       @[Kommando::Option(
+        name: {{name}},
         type: {{type}},
         desc: {{desc}},
         short: {{options[:short] || name[0..0]}},
@@ -53,6 +54,7 @@ module Kommando
         type = args[1]
       %}
       @[Kommando::Argument(
+        name: {{name}},
         type: {{type}},
         validate: ->(%v : {{type}}) {
           %res = ({{validate}} || ->(_v : {{type}}){ true }).call(%v)
@@ -86,6 +88,69 @@ module Kommando
       {% verbatim do %}
       macro finished
         {% verbatim do %}
+
+        def self.positionals
+          {% begin %}
+          {% i = 0 %}
+          Tuple.new(
+            {% for var in @type.instance_vars %}
+              {% if ann = var.annotation(Kommando::Argument) %}
+                { pos: {{i}}, {{**ann.named_args}} },
+                {% i += 1 %}
+              {% end %}
+            {% end %}
+          )
+          {% end %}
+        end
+
+        def self.options
+          {% begin %}
+          NamedTuple.new(
+            {% for var in @type.instance_vars %}
+              {% if ann = var.annotation(Kommando::Option) %}
+                {{var.name.id}}: {{ann.named_args}},
+              {% end %}
+            {% end %}
+          )
+          {% end %}
+        end
+
+        def self.describe(io : IO)
+          io << command_name.colorize(:yellow)
+          io << ": "
+          io.puts description.colorize(:dark_gray)
+          io.puts
+
+          io.puts "Positional:"
+
+          positionals.each { |a|
+            io << ("  %-10s" % a[:name]).colorize(:light_blue)
+            io << " : "
+            io << ("%-8s" % a[:type]).colorize(:magenta)
+            io.puts
+          }
+
+          io.puts
+
+          io.puts "Options:"
+
+          options.each { |name, o|
+            io << ("  %-10s " % name).colorize(:light_blue)
+
+            shortcut = ""
+            shortcut = ("-" + o[:short].to_s) if o[:short]
+
+            io << "%-2s" % shortcut.colorize(:cyan)
+
+            io << " : "
+            io << ("%-8s" % o[:type]).colorize(:magenta)
+            io << " "
+            io << o[:desc].colorize(:dark_gray)
+            io.puts
+          }
+
+          io.puts
+        end
 
         def self.call(args : Array(String))
           {% begin %}

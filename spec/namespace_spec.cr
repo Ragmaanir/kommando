@@ -6,6 +6,15 @@ describe Kommando::Namespace do
   class Info
     include Kommando::Command
 
+    def self.description
+      "Prints information"
+    end
+
+    arg :version, Int32
+
+    option :dry, Bool, "Simulate migration", default: false
+    option :verbose, Bool, "More detailed output", default: false
+
     def call
       EXECUTION_LOG << self.command_name
     end
@@ -14,6 +23,10 @@ describe Kommando::Namespace do
   class Create
     include Kommando::Command
 
+    def self.description
+      "Create the database"
+    end
+
     def call
       EXECUTION_LOG << self.command_name
     end
@@ -21,6 +34,10 @@ describe Kommando::Namespace do
 
   class Migrate
     include Kommando::Command
+
+    def self.description
+      "Run pending migrations"
+    end
 
     def call
       EXECUTION_LOG << self.command_name
@@ -60,7 +77,7 @@ describe Kommando::Namespace do
     assert io.to_s == <<-STDOUT
     Commands:
 
-      \e[94minfo\e[0m            \e[90mNo description\e[0m
+      \e[94minfo            \e[0m\e[90mPrints information\e[0m
 
     Namespaces:
 
@@ -79,8 +96,28 @@ describe Kommando::Namespace do
     assert io.to_s == <<-STDOUT
     Commands:
 
-      \e[94mcreate\e[0m          \e[90mNo description\e[0m
-      \e[94mmigrate\e[0m         \e[90mNo description\e[0m
+      \e[94mcreate          \e[0m\e[90mCreate the database\e[0m
+      \e[94mmigrate         \e[0m\e[90mRun pending migrations\e[0m
+    \n
+    STDOUT
+  end
+
+  test "command help" do
+    root = namespace
+
+    io = IO::Memory.new
+
+    root.run(["help", "info"] of String, io)
+
+    assert io.to_s == <<-STDOUT
+    \e[33minfo\e[0m: \e[90mPrints information\e[0m
+
+    Positional:
+    \e[94m  version   \e[0m : \e[35mInt32   \e[0m
+
+    Options:
+    \e[94m  dry        \e[0m\e[36m-d\e[0m : \e[35mBool    \e[0m \e[90mSimulate migration\e[0m
+    \e[94m  verbose    \e[0m\e[36m-v\e[0m : \e[35mBool    \e[0m \e[90mMore detailed output\e[0m
     \n
     STDOUT
   end
