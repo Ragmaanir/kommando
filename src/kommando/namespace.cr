@@ -48,30 +48,27 @@ module Kommando
 
     def run(args : Array(String), io : IO = STDOUT)
       args = args.dup
-      arg = args.shift
+      arg = args.shift?
 
-      if cmd = @commands[arg]?
+      if arg == nil || arg.in?(HELP)
+        help(args, io)
+      elsif cmd = @commands[arg]?
         cmd.call(args)
       elsif ns = @namespaces[arg]?
         ns.run(args, io)
-      elsif arg.in?(HELP)
-        help(args, io)
       else
         raise "Unrecognized command or namespace: #{arg.inspect}"
       end
     end
 
     def help(args : Array(String), io : IO)
-      indent = " "*2
-
       if args.empty?
         if !@commands.empty?
           io.puts "Commands:"
           io.puts
 
           @commands.each do |name, cmd|
-            io << indent
-            io << ("%-16s" % name).colorize(:light_blue)
+            io << ("  %-16s" % name).colorize(:light_blue)
 
             io << cmd.description.colorize(:dark_gray)
 
@@ -86,7 +83,7 @@ module Kommando
           io.puts
 
           @namespaces.each do |name, _ns|
-            io << indent
+            io << "  "
             io << name.colorize(:light_blue)
             io.puts
           end

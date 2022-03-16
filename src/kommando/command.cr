@@ -2,7 +2,7 @@ module Kommando
   module Command
     module Meta
       def description : String
-        ""
+        "No description"
       end
 
       def call(args : Array(String))
@@ -121,19 +121,40 @@ module Kommando
           io.puts description.colorize(:dark_gray)
           io.puts
 
-          io.puts "Positional:"
+          io << "Usage: "
+          describe_usage(io)
+          io.puts
+          io.puts
 
+          io.puts "Positional:"
+          describe_positionals(io)
+          io.puts
+
+          io.puts "Options:"
+          describe_options(io)
+          io.puts
+        end
+
+        def self.describe_usage(io : IO)
+          io << command_name.colorize(:yellow)
+          io << " "
+
+          positionals.each { |a| io << a[:name].colorize(:light_blue) }
+
+          io << " "
+          io << "-option=value".colorize(:dark_gray)
+        end
+
+        def self.describe_positionals(io : IO)
           positionals.each { |a|
             io << ("  %-10s" % a[:name]).colorize(:light_blue)
             io << " : "
             io << ("%-8s" % a[:type]).colorize(:magenta)
             io.puts
           }
+        end
 
-          io.puts
-
-          io.puts "Options:"
-
+        def self.describe_options(io : IO)
           options.each { |name, o|
             io << ("  %-10s " % name).colorize(:light_blue)
 
@@ -148,8 +169,6 @@ module Kommando
             io << o[:desc].colorize(:dark_gray)
             io.puts
           }
-
-          io.puts
         end
 
         def self.call(args : Array(String))

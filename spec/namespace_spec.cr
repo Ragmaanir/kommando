@@ -72,12 +72,12 @@ describe Kommando::Namespace do
 
     io = IO::Memory.new
 
-    root.run(["help"] of String, io)
+    root.run(["help"], io)
 
     assert io.to_s == <<-STDOUT
     Commands:
 
-      \e[94minfo            \e[0m\e[90mPrints information\e[0m
+    \e[94m  info            \e[0m\e[90mPrints information\e[0m
 
     Namespaces:
 
@@ -91,13 +91,13 @@ describe Kommando::Namespace do
 
     io = IO::Memory.new
 
-    root.run(["db", "help"] of String, io)
+    root.run(["db", "help"], io)
 
     assert io.to_s == <<-STDOUT
     Commands:
 
-      \e[94mcreate          \e[0m\e[90mCreate the database\e[0m
-      \e[94mmigrate         \e[0m\e[90mRun pending migrations\e[0m
+    \e[94m  create          \e[0m\e[90mCreate the database\e[0m
+    \e[94m  migrate         \e[0m\e[90mRun pending migrations\e[0m
     \n
     STDOUT
   end
@@ -107,10 +107,12 @@ describe Kommando::Namespace do
 
     io = IO::Memory.new
 
-    root.run(["help", "info"] of String, io)
+    root.run(["help", "info"], io)
 
     assert io.to_s == <<-STDOUT
     \e[33minfo\e[0m: \e[90mPrints information\e[0m
+
+    Usage: \e[33minfo\e[0m \e[94mversion\e[0m \e[90m-option=value\e[0m
 
     Positional:
     \e[94m  version   \e[0m : \e[35mInt32   \e[0m
