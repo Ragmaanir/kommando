@@ -1,6 +1,6 @@
 # Kommando [![Crystal CI](https://github.com/Ragmaanir/kommando/actions/workflows/crystal.yml/badge.svg)](https://github.com/Ragmaanir/kommando/actions/workflows/crystal.yml)
 
-### Version 0.1.0
+### Version 0.1.1
 
 Kommando is a library that helps you build small and large command line interfaces in crystal.
 
@@ -28,10 +28,6 @@ dependencies:
 
 Classes can define helper methods that are scoped to the command. And the helper methods have access to all options of the command.
 
-**Why are positional arguments specified as method parameters and options using the `options`-macro?**
-
-Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature or in one big annotation. Specifying a description, validations etc for each options is easier that way too.
-
 
 ## Usage
 
@@ -42,13 +38,17 @@ record(User, name : String, age : Int32, height : Int32?, nickname : String?)
 
 USERS = [] of User
 
-class Create < Kommando::Command(Nil)
-  option(:height, Int32, validate: ->(v : Int32) { (100..250).includes?(v) })
-  option(:nickname, String, format: /\A[a-zA-Z]+\z/)
+class Create
+  include Kommando::Command
+  option(:height, Int32, "", validate: ->(v : Int32) { (100..250).includes?(v) })
+  option(:nickname, String, "", format: /\A[a-zA-Z]+\z/)
 
-  option(:dead, Bool, "Wether the person is dead", default: false)
+  option(:dead, Bool, "Whether the person is dead", default: false)
 
-  def call(name : String, age : Int32)
+  arg(:name, String)
+  arg(:age, Int32)
+
+  def call
     USERS << User.new(name, age, @height, @nickname)
   end
 end
@@ -56,9 +56,9 @@ end
 test "create user with options" do
   user = User.new("Christian", 55, 175, "Chris")
 
-  Create.run(nil, [
-    "-height", user.height.to_s,
-    "-nickname", user.nickname.to_s,
+  Create.call([
+    "-height=#{user.height}",
+    "-nickname=#{user.nickname}",
     user.name, user.age.to_s,
   ])
 
@@ -72,20 +72,22 @@ end
 ```crystal
 require "kommando"
 
-class Create < Kommando::Command(Nil)
+class Create
+  include Kommando::Command
+
   def call
   end
 end
 
-class Migrate < Kommando::Command(Nil)
+class Migrate
+  include Kommando::Command
+
   def call
   end
 end
 
 test do
-  ctx = nil
-
-  root = Kommando::Namespace.root(ctx) do
+  root = Kommando::Namespace.root do
     commands Create
 
     namespace("db") do
@@ -104,23 +106,22 @@ end
 ```crystal
 require "kommando"
 
-class Ctx
-end
+class Create
+  include Kommando::Command
 
-class Create < Kommando::Command(Ctx)
   def call
   end
 end
 
-class UnrelatedCmd < Kommando::Command(Nil)
+class UnrelatedCmd
+  include Kommando::Command
+
   def call
   end
 end
 
 test do
-  ctx = Ctx.new
-
-  root = Kommando::Namespace.root(ctx) do
+  root = Kommando::Namespace.root do
     namespace("db") do
       command Create
       command UnrelatedCmd

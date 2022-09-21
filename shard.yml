@@ -9,8 +9,8 @@ authors:
 development_dependencies:
   microtest:
     github: ragmaanir/microtest
-    version: ~> 1.2
+    branch: master
 
   ameba:
     github: veelenga/ameba
-    version: ~> 0.14
+    version: ~> 1.1

@@ -1,4 +1,2 @@
-#!/usr/bin/env crystal
-require "./src/kommando/cli"
-
-Kommando::Cli.run
+#!/bin/bash
+crystal run --error-trace src/kommando/cli.cr -- "$@"

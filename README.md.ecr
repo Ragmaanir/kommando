@@ -28,10 +28,6 @@ dependencies:
 
 Classes can define helper methods that are scoped to the command. And the helper methods have access to all options of the command.
 
-**Why are positional arguments specified as method parameters and options using the `options`-macro?**
-
-Usually commands have many options and just a few arguments. It is easier to spread the options out using the `option`-macro than having them in the method signature or in one big annotation. Specifying a description, validations etc for each options is easier that way too.
-
 
 ## Usage
 

@@ -1,19 +1,15 @@
 require "ecr"
 require "../command"
 
-module Kommando
-  module Cli
-    class Readme
-      include Kommando::Command
+class Kommando::Cli::Readme
+  include Kommando::Command
 
-      class ReadmeTemplate
-        ECR.def_to_s "README.md.ecr"
-      end
+  class ReadmeTemplate
+    ECR.def_to_s "README.md.ecr"
+  end
 
-      def call
-        puts "Building README.md from README.md.ecr"
-        File.write(ROOT / "README.md", ReadmeTemplate.new.to_s)
-      end
-    end
+  def call
+    puts "Building README.md from README.md.ecr"
+    File.write(ROOT / "README.md", ReadmeTemplate.new.to_s)
   end
 end
