@@ -2,126 +2,136 @@ require "colorize"
 
 module Kommando
   module Interaction
-    CONFIRM = %w{Y y Yes yes}
-    DENY    = %w{N n No no}
+    class Session
+      CONFIRM = %w{Y y Yes yes}
+      DENY    = %w{N n No no}
 
-    def ask(text : String, &block : String -> T?) : T forall T
-      res = nil
+      @io : IO
+      delegate gets, to: @io
 
-      while res == nil
+      getter? colorize : Bool
+
+      def self.define(io : IO, colorize : Bool = true)
+        s = new(io, colorize)
+        with s yield(s)
+      end
+
+      private def initialize(@io, @colorize = true)
+      end
+
+      def read_until(&block : String -> T?) : T forall T
+        res = nil
+
+        while res == nil
+          print_input_marker
+          s = read_string_once
+
+          res = yield s
+        end
+
+        res.not_nil!
+      end
+
+      def ask(text : String, &block : String -> T?) : T forall T
         print_question(text)
-        print INPUT_MARKER
+
+        read_until(&block)
+      end
+
+      def ask(text : String, type : Int32.class | Float32.class) : Int32 | Float32
+        ask(text) do |s|
+          case type
+          when Int32.class   then s.to_i?
+          when Float32.class then s.to_f32?
+          end
+        end
+      end
+
+      def choose(text : String, options : Array({String, String?})) : String
+        print_question(text)
+
+        options.each_with_index { |(key, desc), i|
+          w("%2d" % (i + 1), fg: :cyan)
+          w(" : ")
+          w(("%8s" % key), fg: :cyan)
+          if desc
+            w(" : ")
+            w(desc, fg: :dark_gray)
+          end
+          br
+        }
+
+        keys = options.map(&.[0])
+
+        read_until { |a|
+          if num = a.to_i?
+            if o = options[num - 1]?
+              o[0]
+            end
+          else
+            a if keys.includes?(a)
+          end
+        }
+      end
+
+      def choose(text : String, options : Array(String)) : String
+        choose(text, options.map { |s| {s, nil} })
+      end
+
+      def confirm(text : String, confirm : Array(String) = CONFIRM, deny : Array(String) = DENY)
+        ask(text) { |answer|
+          case answer
+          when .in?(CONFIRM) then true
+          when .in?(DENY)    then false
+          end
+        }
+      end
+
+      def read_string_once
+        gets || ""
+      end
+
+      def read_once(type : Int32.class | Float32.class)
         s = read_string_once
 
-        res = yield s
+        case type
+        when Int32.class   then s.to_i?
+        when Float32.class then s.to_f32?
+        end
       end
 
-      res.not_nil!
-    end
-
-    def ask(text : String, type : Int32.class | Float32.class) : Int32 | Float32
-      res = nil
-
-      while res == nil
-        print_question(text)
-        print INPUT_MARKER
-        res = read_once(type)
+      def print_question(q : String)
+        w(q, "\n", fg: :blue)
       end
 
-      res.not_nil!
-    end
+      def print_input_marker
+        w("> ", fg: :yellow)
+      end
 
-    def choose(text : String, options : Array({String, String})) : String
-      print_question(text)
+      private def br
+        w("\n")
+      end
 
-      options.each_with_index { |(key, desc), i|
-        print ("%2d" % (i + 1)).colorize(:cyan)
-        print " : "
-        print ("%8s" % key).colorize(:cyan)
-        print " : "
-        puts desc.colorize(:dark_gray)
-      }
+      private def colorized_io(fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
+        if colorize?
+          c = Colorize.with
+          c = c.fore(fg) if fg
+          c = c.mode(m) if m
+          c = c.back(bg) if bg
 
-      keys = options.map(&.[0])
-
-      ask(text) { |a|
-        if num = a.to_i?
-          if o = options[num - 1]?
-            o[0]
+          c.surround(@io) do |cio|
+            yield cio
           end
         else
-          a if keys.includes?(a)
+          yield @io
         end
-      }
-    end
+      end
 
-    def choose(text : String, options : Array(String)) : String
-      print_question(text)
-
-      options.each_with_index { |opt, i|
-        print ("%2d" % (i + 1)).colorize(:cyan)
-        print " : "
-        puts(("%s" % opt).colorize(:dark_gray))
-      }
-
-      ask(text) { |a|
-        if num = a.to_i?
-          if o = options[num - 1]?
-            o[0]
-          end
-        else
-          a if options.includes?(a)
+      private def w(*strs : String | Int32 | Nil, fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
+        colorized_io(fg, bg, m) do |cio|
+          strs.each { |s| cio << s }
         end
-      }
-    end
-
-    def confirm(text : String, confirm : Array(String) = CONFIRM, deny : Array(String) = DENY)
-      ask(text) { |answer|
-        case answer
-        when .in?(CONFIRM) then true
-        when .in?(DENY)    then false
-        end
-      }
-    end
-
-    def read_string_once
-      gets || ""
-    end
-
-    def read_once(type : Int32.class | Float32.class)
-      s = read_string_once
-
-      case type
-      when Int32.class   then s.to_i?
-      when Float32.class then s.to_f32?
       end
     end
-
-    def print_question(q : String)
-      puts q.colorize(:blue)
-    end
-
-    INPUT_MARKER = "> ".colorize(:yellow)
   end
 end
-
-module X
-  extend Kommando::Interaction
-
-  def self.run
-    # age = ask("What is your age?") { |s|
-    #   s.to_i?
-    # }
-    age = ask("Age?", Int32)
-
-    name = choose("Choose a character", [
-      {"Wizard", "Can use magic spells"},
-      {"Archer", "Shoots arrows over a long distance"},
-      {"Knight", "Very strong armor, only melee fighting"},
-    ])
-
-    c = confirm("Want to exit #{name}?")
-  end
-end
-
-X.run
