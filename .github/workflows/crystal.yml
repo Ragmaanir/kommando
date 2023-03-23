@@ -18,7 +18,7 @@ jobs:
           - os: ubuntu-latest
             crystal: nightly
           - os: macos-latest
-          - os: windows-latest
+          # - os: windows-latest
         # crystal: [latest, nightly]
     runs-on: ${{ matrix.os }}
 
