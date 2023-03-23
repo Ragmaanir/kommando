@@ -9,9 +9,11 @@
 
 ### Features
 
+- [ ] Interactive mode so one does not have to call `-h` all the time
 - [ ] Validation and parsing
   - Should validation happen before or after parsing? Probably after. Validation before is done by the parser itself.
   - What about contextual validation? E.g. option_a > option_b
+  - Show better validation errors
 - [ ] Git allows options for parent and subcommands simultaneously:
   `program -a -b -c subcommand -x -y -z`
   This would require some kind of namespace-options which would be accessible for all commands in that namespace.

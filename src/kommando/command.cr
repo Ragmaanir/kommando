@@ -31,11 +31,20 @@ module Kommando
           %res = ({{validate}} || ->(_v : {{type}}){ true }).call(%v)
 
           if ![true, nil].includes?(%res)
-            raise Kommando::ValidationError.new("{{name.id}}", %res.to_s)
+            raise Kommando::ValidationError.new("{{name.id}}", "{{type.id}}", %v.to_s, %res.to_s)
           end
         },
         parse: ({{parse}} || ->(%raw_val : String) {
-          Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+          begin
+            Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+          rescue e
+            raise Kommando::ValidationError.new(
+              "{{name.id}}",
+              {{type.stringify}},
+              %raw_val.to_s,
+              e.message
+            )
+          end
         }),
 
         {% for k, v in options %}
@@ -60,11 +69,20 @@ module Kommando
           %res = ({{validate}} || ->(_v : {{type}}){ true }).call(%v)
 
           if ![true, nil].includes?(%res)
-            raise Kommando::ValidationError.new("{{name.id}}", %res.to_s)
+            raise Kommando::ValidationError.new("{{name.id}}", "{{type.id}}", %v.to_s, %res.to_s)
           end
         },
         parse: {{parse}} || ->(%raw_val : String) {
-          Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+          begin
+            Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+          rescue e
+            raise Kommando::ValidationError.new(
+              "{{name.id}}",
+              {{type.stringify}},
+              %raw_val.to_s,
+              e.message
+            )
+          end
         },
 
         {% for k, v in options %}
@@ -183,7 +201,7 @@ module Kommando
               {% if ann = var.annotation(Kommando::Argument) %}
                 {% a = ann.named_args %}
                 begin
-                  raise Kommando::MissingArgumentError.new("{{var.name}}") if {{i}} >= %positional_args.size
+                  raise Kommando::MissingArgumentError.new("{{var.name}}", "{{var.type}}") if {{i}} >= %positional_args.size
                   %value = {{a[:parse]}}.call(%positional_args[{{i}}])
 
                   {{a[:validate]}}.call(%value)
@@ -202,19 +220,40 @@ module Kommando
 
           %options = %pair[:options]
 
+          {% option_names = [] of String %}
+
           %parsed_options = NamedTuple.new(
             {% for var in @type.instance_vars %}
               {% name = var.name %}
               {% if ann = var.annotation(Kommando::Option) %}
                 {% a = ann.named_args %}
                 {{name}}: begin
-                  %raw_value = %options[{{name.stringify}}]?
+                  {% n = a[:name].id.stringify %}
+                  {% s = a[:short].id.stringify %}
+                  {% option_names << n %}
+                  {% option_names << s %}
 
-                  {{a[:parse]}}.call(%raw_value) if %raw_value
+                  if %options.has_key?({{n}}) && %options.has_key?({{s}})
+                    raise Kommando::DuplicateOptionError.new({{n}},{{s}})
+                  end
+
+                  if %options.has_key?({{n}})
+                    if %raw_value = %options[{{n}}]?
+                      {{a[:parse]}}.call(%raw_value)
+                    end
+                  elsif %options.has_key?({{s}})
+                    if %raw_value = %options[{{s}}]?
+                      {{a[:parse]}}.call(%raw_value)
+                    end
+                  end
                 end,
               {% end %}
             {% end %}
           )
+
+          if unknown = %options.keys.find { |k| !({{option_names}} of String).includes?(k) }
+            raise Kommando::UnknownOptionError.new(unknown)
+          end
 
           new(*%parsed_pos_args, **%parsed_options).call
           {% end %}

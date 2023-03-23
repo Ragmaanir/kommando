@@ -1,6 +1,6 @@
 # Kommando [![Crystal CI](https://github.com/Ragmaanir/kommando/actions/workflows/crystal.yml/badge.svg)](https://github.com/Ragmaanir/kommando/actions/workflows/crystal.yml)
 
-### Version 0.1.1
+### Version 0.1.2
 
 Kommando is a library that helps you build small and large command line interfaces in crystal.
 

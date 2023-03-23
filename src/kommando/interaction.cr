@@ -16,7 +16,7 @@ module Kommando
         with s yield(s)
       end
 
-      private def initialize(@io, @colorize = true)
+      def initialize(@io, @colorize = true)
       end
 
       def read_until(&block : String -> T?) : T forall T
@@ -31,6 +31,8 @@ module Kommando
 
         res.not_nil!
       end
+
+      # TODO: ask with default
 
       def ask(text : String, &block : String -> T?) : T forall T
         print_question(text)
@@ -108,11 +110,11 @@ module Kommando
         w("> ", fg: :yellow)
       end
 
-      private def br
+      def br
         w("\n")
       end
 
-      private def colorized_io(fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
+      def colorized_io(fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
         if colorize?
           c = Colorize.with
           c = c.fore(fg) if fg
@@ -127,7 +129,7 @@ module Kommando
         end
       end
 
-      private def w(*strs : String | Int32 | Nil, fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
+      def w(*strs : String | Int32 | Nil, fg : Symbol? = nil, bg : Symbol? = nil, m : Colorize::Mode? = nil)
         colorized_io(fg, bg, m) do |cio|
           strs.each { |s| cio << s }
         end

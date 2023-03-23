@@ -55,7 +55,16 @@ describe Kommando::Namespace do
     end
   end
 
-  test "execution" do
+  def run_and_capture(args : Array(String))
+    root = namespace
+    io = IO::Memory.new
+
+    root.run(args, io)
+
+    io.to_s
+  end
+
+  test "run" do
     root = namespace
 
     assert root.commands.keys == ["info"]
@@ -67,14 +76,16 @@ describe Kommando::Namespace do
     assert EXECUTION_LOG == ["create", "migrate"]
   end
 
+  test "validation failures" do
+    assert_raises(MissingArgumentError) { run_and_capture(["info"]) }
+    assert_raises(UnexpectedArgumentsError) { run_and_capture(["info", "123", "456", "789"]) }
+    assert_raises(ValidationError) { run_and_capture(["info", "xxx"]) }
+    assert_raises(ValidationError) { run_and_capture(["info", "123", "-d=xxx"]) }
+    assert_raises(DuplicateOptionError) { run_and_capture(["info", "123", "-d=yes", "-dry"]) }
+  end
+
   test "root help" do
-    root = namespace
-
-    io = IO::Memory.new
-
-    root.run(["help"], io)
-
-    assert io.to_s == <<-STDOUT
+    assert run_and_capture(["help"]) == <<-STDOUT
     Commands:
 
     \e[94m  info            \e[0m\e[90mPrints information\e[0m
@@ -87,13 +98,7 @@ describe Kommando::Namespace do
   end
 
   test "nested namespace help" do
-    root = namespace
-
-    io = IO::Memory.new
-
-    root.run(["db", "help"], io)
-
-    assert io.to_s == <<-STDOUT
+    assert run_and_capture(["db", "help"]) == <<-STDOUT
     Commands:
 
     \e[94m  create          \e[0m\e[90mCreate the database\e[0m
@@ -103,13 +108,7 @@ describe Kommando::Namespace do
   end
 
   test "command help" do
-    root = namespace
-
-    io = IO::Memory.new
-
-    root.run(["help", "info"], io)
-
-    assert io.to_s == <<-STDOUT
+    assert run_and_capture(["help", "info"]) == <<-STDOUT
     \e[33minfo\e[0m: \e[90mPrints information\e[0m
 
     Usage: \e[33minfo\e[0m \e[94mversion\e[0m \e[90m-option=value\e[0m

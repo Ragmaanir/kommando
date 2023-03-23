@@ -46,6 +46,15 @@ module Kommando
       @commands[name] = cmd
     end
 
+    # Like `#run`, but prints execptions to stderr and exits the Process.
+    # This method makes the namespace act as a CLI.
+    def exec(args : Array(String) = ARGV, io : IO = STDOUT, err : IO = STDERR)
+      run(args, io)
+    rescue e : ValidationError | MissingArgumentError | UnexpectedArgumentsError | DuplicateOptionError | UnknownOptionError
+      err.puts e.message
+      exit 1
+    end
+
     def run(args : Array(String), io : IO = STDOUT)
       args = args.dup
       arg = args.shift?
