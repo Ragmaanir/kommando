@@ -36,14 +36,9 @@ module Kommando
         },
         parse: ({{parse}} || ->(%raw_val : String) {
           begin
-            Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+            Kommando::ARG_PARSERS["{{type.id}}"].call(%raw_val).as({{type}})
           rescue e
-            raise Kommando::ValidationError.new(
-              "{{name.id}}",
-              {{type.stringify}},
-              %raw_val.to_s,
-              e.message
-            )
+            raise Kommando::ValidationError.new("{{name.id}}", "{{type.id}}", %raw_val.to_s, e.message)
           end
         }),
 
@@ -74,14 +69,9 @@ module Kommando
         },
         parse: {{parse}} || ->(%raw_val : String) {
           begin
-            Kommando::ARG_PARSERS[{{type.stringify}}].call(%raw_val).as({{type}})
+            Kommando::ARG_PARSERS["{{type.id}}"].call(%raw_val).as({{type}})
           rescue e
-            raise Kommando::ValidationError.new(
-              "{{name.id}}",
-              {{type.stringify}},
-              %raw_val.to_s,
-              e.message
-            )
+            raise Kommando::ValidationError.new("{{name.id}}", "{{type.id}}", %raw_val.to_s, e.message)
           end
         },
 
@@ -201,7 +191,9 @@ module Kommando
               {% if ann = var.annotation(Kommando::Argument) %}
                 {% a = ann.named_args %}
                 begin
-                  raise Kommando::MissingArgumentError.new("{{var.name}}", "{{var.type}}") if {{i}} >= %positional_args.size
+                  if {{i}} >= %positional_args.size
+                    raise Kommando::MissingArgumentError.new("{{var.name}}", "{{var.type}}")
+                  end
                   %value = {{a[:parse]}}.call(%positional_args[{{i}}])
 
                   {{a[:validate]}}.call(%value)
@@ -220,38 +212,49 @@ module Kommando
 
           %options = %pair[:options]
 
-          {% option_names = [] of String %}
+          {%
+            option_vars = [] of Tuple(Crystal::MetaVar, Kommando::Option)
+
+            @type.instance_vars.each do |var|
+              if ann = var.annotation(Kommando::Option)
+                option_vars << {var, ann}
+              end
+            end
+
+            encountered_options = [] of String
+          %}
 
           %parsed_options = NamedTuple.new(
-            {% for var in @type.instance_vars %}
-              {% name = var.name %}
-              {% if ann = var.annotation(Kommando::Option) %}
-                {% a = ann.named_args %}
-                {{name}}: begin
-                  {% n = a[:name].id.stringify %}
-                  {% s = a[:short].id.stringify %}
-                  {% option_names << n %}
-                  {% option_names << s %}
+            {% for pair in option_vars %}
+              {%
+                var, ann = pair
+                a = ann.named_args
+                n = a[:name].id.stringify
+                s = a[:short].id.stringify
+                encountered_options << n
+                encountered_options << s
+              %}
+              {{var.name}}: begin
+                %name = {{n}}
+                %short = {{s}}
+                %parse = {{a[:parse]}}
 
-                  if %options.has_key?({{n}}) && %options.has_key?({{s}})
-                    raise Kommando::DuplicateOptionError.new({{n}},{{s}})
+                if %options.has_key?(%name) && %options.has_key?(%short)
+                  raise Kommando::DuplicateOptionError.new(%name, %short)
+                elsif %options.has_key?(%name)
+                  if %raw_value = %options[%name]?
+                    %parse.call(%raw_value)
                   end
-
-                  if %options.has_key?({{n}})
-                    if %raw_value = %options[{{n}}]?
-                      {{a[:parse]}}.call(%raw_value)
-                    end
-                  elsif %options.has_key?({{s}})
-                    if %raw_value = %options[{{s}}]?
-                      {{a[:parse]}}.call(%raw_value)
-                    end
+                elsif %options.has_key?(%short)
+                  if %raw_value = %options[%short]?
+                    %parse.call(%raw_value)
                   end
-                end,
-              {% end %}
+                end
+              end,
             {% end %}
           )
 
-          if unknown = %options.keys.find { |k| !({{option_names}} of String).includes?(k) }
+          if unknown = %options.keys.find { |k| !({{encountered_options}} of String).includes?(k) }
             raise Kommando::UnknownOptionError.new(unknown)
           end
 
@@ -278,13 +281,20 @@ module Kommando
             {% if ann = v.annotation(Kommando::Option) %}
               {% default = ann.named_args[:default] %}
 
-              %value = options[:{{name}}]? || {{default}}.call
+              %value = options[:{{name}}]?
+
+              if %value == nil
+                %value = {{default}}.call
+              end
+
+              # if !options.has_key?(:{{name}})
+              #   %value = { {default}}.call
+              # end
 
               case %v = %value
               when nil
               else
                 {{ann.named_args[:validate]}}.call(%v)
-
                 @{{name}} = %v
               end
             {% end %}

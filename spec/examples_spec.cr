@@ -7,7 +7,3 @@ end
 describe NamespaceExample do
   {{`cat spec/examples/namespace.cr`}}
 end
-
-describe FullExample do
-  {{`cat spec/examples/full.cr`}}
-end

@@ -23,9 +23,10 @@ module Kommando
     "String": ->(s : String) { s },
     "Bool":   ->(s : String) {
       case s.downcase
-      when TRUE_VALUES  then true
-      when FALSE_VALUES then false
-      else                   raise ArgumentError.new("Expected one of #{TRUE_VALUES + FALSE_VALUES}")
+      when .in?(TRUE_VALUES)  then true
+      when .in?(FALSE_VALUES) then false
+      else
+        raise ArgumentError.new("Expected one of #{TRUE_VALUES + FALSE_VALUES}")
       end
     },
   }
