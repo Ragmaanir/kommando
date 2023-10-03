@@ -6,6 +6,8 @@ require "./kommando/docker"
 require "./kommando/command"
 require "./kommando/namespace"
 
+Colorize.on_tty_only!
+
 module Kommando
   ROOT = Path.new(__DIR__).parent
 

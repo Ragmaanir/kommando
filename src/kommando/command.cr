@@ -279,7 +279,8 @@ module Kommando
           {% for v in @type.instance_vars %}
             {% name = v.name.id %}
             {% if ann = v.annotation(Kommando::Option) %}
-              {% default = ann.named_args[:default] %}
+              {% a = ann.named_args %}
+              {% default = a[:default] %}
 
               %value = options[:{{name}}]?
 
@@ -294,7 +295,7 @@ module Kommando
               case %v = %value
               when nil
               else
-                {{ann.named_args[:validate]}}.call(%v)
+                {{a[:validate]}}.call(%v)
                 @{{name}} = %v
               end
             {% end %}
