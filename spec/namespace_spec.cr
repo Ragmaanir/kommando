@@ -59,7 +59,10 @@ describe Kommando::Namespace do
     root = namespace
     io = IO::Memory.new
 
+    c = Colorize.enabled?
+    Colorize.enabled = true
     root.run(args, io)
+    Colorize.enabled = c
 
     io.to_s
   end
