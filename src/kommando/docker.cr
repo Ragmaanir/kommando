@@ -28,12 +28,12 @@ module Kommando
       )
 
       # if status.success?
-      #   print "✓ ".colorize(:green)
+      #   print "✓ ".colorize(GREEN)
 
       #   # puts "#{name} [#{Docker.images(stdio.to_s).last}]"
       #   # puts stdio.to_s.split("\n")[-3]
       # else
-      #   print "× ".colorize(:red)
+      #   print "× ".colorize(RED)
       #   puts "#{name}"
 
       #   puts stdio.to_s

@@ -1,5 +1,6 @@
 require "colorize"
 require "./kommando/version"
+require "./kommando/colors"
 require "./kommando/errors"
 require "./kommando/parser"
 require "./kommando/docker"

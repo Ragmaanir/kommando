@@ -103,7 +103,7 @@ module Kommando
           Tuple.new(
             {% for var in @type.instance_vars %}
               {% if ann = var.annotation(Kommando::Argument) %}
-                { pos: {{i}}, {{**ann.named_args}} },
+                { pos: {{i}}, {{ann.named_args.double_splat}} },
                 {% i += 1 %}
               {% end %}
             {% end %}
@@ -124,9 +124,9 @@ module Kommando
         end
 
         def self.describe(io : IO)
-          io << command_name.colorize(:yellow)
+          io << command_name.colorize(Kommando::YELLOW)
           io << ": "
-          io.puts description.colorize(:dark_gray)
+          io.puts description.colorize(Kommando::DARK_GRAY)
           io.puts
 
           io << "Usage: "
@@ -144,37 +144,39 @@ module Kommando
         end
 
         def self.describe_usage(io : IO)
-          io << command_name.colorize(:yellow)
+          io << command_name.colorize(Kommando::YELLOW)
           io << " "
 
-          positionals.each { |a| io << a[:name].colorize(:light_blue) }
+          positionals.join(io, " ") { |a, io|
+            io << a[:name].colorize(Kommando::LIGHT_BLUE)
+          }
 
           io << " "
-          io << "-option=value".colorize(:dark_gray)
+          io << "-option=value".colorize(Kommando::DARK_GRAY)
         end
 
         def self.describe_positionals(io : IO)
           positionals.each { |a|
-            io << ("  %-10s" % a[:name]).colorize(:light_blue)
+            io << ("  %-10s" % a[:name]).colorize(Kommando::LIGHT_BLUE)
             io << " : "
-            io << ("%-8s" % a[:type]).colorize(:magenta)
+            io << ("%-8s" % a[:type]).colorize(Kommando::MAGENTA)
             io.puts
           }
         end
 
         def self.describe_options(io : IO)
           options.each { |name, o|
-            io << ("  %-10s " % name).colorize(:light_blue)
+            io << ("  %-10s " % name).colorize(Kommando::LIGHT_BLUE)
 
             shortcut = ""
             shortcut = ("-" + o[:short].to_s) if o[:short]
 
-            io << "%-2s" % shortcut.colorize(:cyan)
+            io << "%-2s" % shortcut.colorize(Kommando::CYAN)
 
             io << " : "
-            io << ("%-8s" % o[:type]).colorize(:magenta)
+            io << ("%-8s" % o[:type]).colorize(Kommando::MAGENTA)
             io << " "
-            io << o[:desc].colorize(:dark_gray)
+            io << o[:desc].colorize(Kommando::DARK_GRAY)
             io.puts
           }
         end

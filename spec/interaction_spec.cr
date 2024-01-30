@@ -51,9 +51,12 @@ describe Kommando::Interaction::Session do
     def write(slice : Bytes) : Nil
       # STDOUT.puts ".write(#{String.new(slice).inspect})"
       raise "Expected :write, got #{current_action[0]}" if current_action[0] != :write
+      # raise "Invalid length: #{current_action[1].inspect} <=> #{String.new(slice).inspect}" if current_action[1].size != slice.size
 
       slice.size.times { |i|
-        raise "Unexpected output: #{String.new(slice).inspect} != #{current_action[1].inspect}" if slice[i] != current_action[1].byte_at(@string_idx)
+        if slice[i] != current_action[1].byte_at(@string_idx)
+          raise "Unexpected output: #{String.new(slice).inspect} != #{current_action[1].inspect}"
+        end
         @string_idx += 1
       }
       advance if current_action[1].size == @string_idx
@@ -61,7 +64,7 @@ describe Kommando::Interaction::Session do
   end
 
   def session(io, colorize = false)
-    Kommando::Interaction::Session.define(io, colorize) do |s|
+    Kommando::Interaction::Session.define(io, io, colorize) do |s|
       with s yield(s)
     end
   end
@@ -146,6 +149,7 @@ describe Kommando::Interaction::Session do
   test "confirm" do
     io = CannedIO.build do
       write "Want to exit?\n"
+      write "[y, yes, n, no]\n"
       write "> "
       read "n\n"
     end

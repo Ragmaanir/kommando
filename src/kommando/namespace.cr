@@ -66,7 +66,10 @@ module Kommando
       elsif ns = @namespaces[arg]?
         ns.run(args, io)
       else
-        raise "Unrecognized command or namespace: #{arg.inspect}"
+        io.puts "Unrecognized command or namespace: #{arg.inspect}".colorize(RED)
+        io.puts
+        help([] of String, io)
+        exit 1
       end
     end
 
@@ -77,9 +80,9 @@ module Kommando
           io.puts
 
           @commands.each do |name, cmd|
-            io << ("  %-16s" % name).colorize(:light_blue)
+            io << ("  %-16s" % name).colorize(LIGHT_BLUE)
 
-            io << cmd.description.colorize(:dark_gray)
+            io << cmd.description.colorize(DARK_GRAY)
 
             io.puts
           end
@@ -93,7 +96,7 @@ module Kommando
 
           @namespaces.each do |name, _ns|
             io << "  "
-            io << name.colorize(:light_blue)
+            io << name.colorize(LIGHT_BLUE)
             io.puts
           end
 
